@@ -1,0 +1,17 @@
+# Places construites par Rojo (rojo build) et verrous de Studio
+build/
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Outillage généré
+sourcemap.json
+roblox.yml
+
+# Fichiers système et éditeurs
+.DS_Store
+Thumbs.db
+*.swp
+*.tmp
+.idea/
