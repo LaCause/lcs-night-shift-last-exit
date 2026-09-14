@@ -1,6 +1,10 @@
 --!strict
 -- HUD (FR-035, FR-036) : phase, nuit, temps restant, équipe et fil de notifications.
 -- N'affiche que l'état répliqué par le serveur (principe III).
+--
+-- Disposition : bandeau en haut au centre, colonne équipe + ressources à droite, fil de
+-- notifications en bas à gauche. Le coin haut gauche reste libre pour le chat Roblox et le
+-- panneau de dev de Studio (DevPanel.client.luau).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -11,6 +15,7 @@ local Shared = ReplicatedStorage:WaitForChild("Shared")
 local ClientFolder = Shared:WaitForChild("Client")
 local Config = require(Shared:WaitForChild("Config") :: ModuleScript)
 local Strings = require(Shared:WaitForChild("Strings") :: ModuleScript)
+local GameplayStateClient = require(ClientFolder:WaitForChild("GameplayStateClient") :: ModuleScript)
 local MatchStateClient = require(ClientFolder:WaitForChild("MatchStateClient") :: ModuleScript)
 local NetClient = require(ClientFolder:WaitForChild("NetClient") :: ModuleScript)
 local UiKit = require(ClientFolder:WaitForChild("UiKit") :: ModuleScript)
@@ -19,7 +24,16 @@ local screen = script.Parent :: ScreenGui
 local Colors = UiKit.Colors
 
 local REFRESH_INTERVAL = 0.1 -- 10 Hz au plus
-local FEED_KINDS = { "PhaseStarted", "PlayerJoined", "PlayerLeft", "StatusChanged", "BellRang", "MatchEnded" }
+local ROW_TEXT_SIZE = 16
+local FEED_KINDS = {
+	"PhaseStarted",
+	"PlayerJoined",
+	"PlayerLeft",
+	"StatusChanged",
+	"BellRang",
+	"MatchEnded",
+	"OrderPrepared",
+}
 local PHASE_COLORS: { [string]: Color3 } = {
 	Waiting = Colors.Muted,
 	Countdown = Colors.Text,
@@ -88,21 +102,49 @@ local function refreshTop()
 	end
 end
 
--- Équipe (à droite) -------------------------------------------------------------------------
+-- Colonne de droite : panneaux empilés, à hauteur ajustée à leur contenu ---------------------
 
-local teamPanel = UiKit.frame(screen, "Team", UDim2.fromScale(0.2, 0.34), UDim2.new(1, -12, 0, 8), Vector2.new(1, 0))
-UiKit.sizeLimits(teamPanel, Vector2.new(170, 110), Vector2.new(260, 300))
-UiKit.corner(teamPanel, 10)
-UiKit.padding(teamPanel, 8)
-UiKit.list(teamPanel, 4)
+local sideColumn = UiKit.frame(screen, "Side", UDim2.fromScale(0.22, 0), UDim2.new(1, -12, 0, 8), Vector2.new(1, 0))
+sideColumn.BackgroundTransparency = 1
+sideColumn.AutomaticSize = Enum.AutomaticSize.Y
+UiKit.sizeLimits(sideColumn, Vector2.new(190, 0), Vector2.new(260, math.huge))
+UiKit.list(sideColumn, 8)
 
-local teamTitle = UiKit.label(teamPanel, "Title", Strings.format("Hud.Team"), UDim2.new(1, 0, 0, 24), {
-	font = UiKit.Fonts.Title,
-	color = Colors.Cyan,
-	align = Enum.TextXAlignment.Left,
-	maxSize = 20,
-})
-teamTitle.LayoutOrder = 0
+local function sidePanel(name: string, order: number): Frame
+	local panel = UiKit.frame(sideColumn, name, UDim2.fromScale(1, 0))
+	panel.AutomaticSize = Enum.AutomaticSize.Y
+	panel.LayoutOrder = order
+	UiKit.corner(panel, 10)
+	UiKit.padding(panel, 8)
+	UiKit.list(panel, 4)
+	return panel
+end
+
+local function panelTitle(panel: Frame, text: string): TextLabel
+	local title = UiKit.label(panel, "Title", text, UDim2.new(1, 0, 0, 24), {
+		font = UiKit.Fonts.Title,
+		color = Colors.Cyan,
+		align = Enum.TextXAlignment.Left,
+		maxSize = 20,
+	})
+	title.LayoutOrder = 0
+	return title
+end
+
+-- Ligne à hauteur automatique : un texte trop long passe à la ligne au lieu de déborder.
+local function panelRow(panel: Frame, name: string, text: string, color: Color3?): TextLabel
+	return UiKit.label(panel, name, text, UDim2.fromScale(1, 0), {
+		align = Enum.TextXAlignment.Left,
+		autoHeight = true,
+		textSize = ROW_TEXT_SIZE,
+		color = color,
+	})
+end
+
+-- Équipe ------------------------------------------------------------------------------------
+
+local teamPanel = sidePanel("Team", 1)
+local teamTitle = panelTitle(teamPanel, Strings.format("Hud.Team"))
 
 local function rebuildTeam(leaving: Player?)
 	for _, child in teamPanel:GetChildren() do
@@ -122,11 +164,12 @@ local function rebuildTeam(leaving: Player?)
 	for index, player in members do
 		local alive = player:GetAttribute("Status") ~= "Eliminated"
 		local status = Strings.format(if alive then "Hud.Status.Alive" else "Hud.Status.Eliminated")
-		local row = UiKit.label(teamPanel, "Row", `● {player.DisplayName} — {status}`, UDim2.new(1, 0, 0, 22), {
-			color = if alive then Colors.Good else Colors.Bad,
-			align = Enum.TextXAlignment.Left,
-			maxSize = 18,
-		})
+		local row = panelRow(
+			teamPanel,
+			"Row",
+			`● {player.DisplayName} — {status}`,
+			if alive then Colors.Good else Colors.Bad
+		)
 		row.LayoutOrder = index
 		row:SetAttribute("TeamRow", true)
 	end
@@ -142,6 +185,126 @@ local function watch(player: Player)
 	statusConnections[player] = player:GetAttributeChangedSignal("Status"):Connect(function()
 		rebuildTeam(nil)
 	end)
+end
+
+-- Ressources et jauges du joueur (002-premier-increment-jouable) ------------------------------
+
+local gameplayPanel = sidePanel("Gameplay", 2)
+panelTitle(gameplayPanel, Strings.format("Hud.Resources"))
+
+local gameplayRows: { [string]: TextLabel } = {}
+
+-- Une ligne par clé, créée au premier appel puis seulement mise à jour.
+local function gameplayRow(key: string, order: number): TextLabel
+	local row = gameplayRows[key]
+	if row == nil then
+		row = panelRow(gameplayPanel, key, "")
+		row.LayoutOrder = order
+		gameplayRows[key] = row
+	end
+	return row
+end
+
+-- Petit « coup de pouce » visuel (FR-035/FR-036, retour immédiat) : la ligne bascule dans une
+-- couleur d'accent puis retourne à sa couleur normale, sans dépendre d'une notification réseau —
+-- ça marche même si Notify arrive dans un ordre différent de Changed.
+local previousGameplay: { [string]: number } = {}
+local activeTweens: { [TextLabel]: Tween } = {}
+
+local function punch(row: TextLabel, accent: Color3, steady: Color3)
+	local existing = activeTweens[row]
+	if existing then
+		existing:Cancel()
+	end
+	row.TextColor3 = accent
+	local tween = TweenService:Create(row, TweenInfo.new(0.4, Enum.EasingStyle.Quad), { TextColor3 = steady })
+	activeTweens[row] = tween
+	tween.Completed:Connect(function()
+		if activeTweens[row] == tween then
+			activeTweens[row] = nil
+		end
+	end)
+	tween:Play()
+end
+
+-- Punch sur tout changement (récolte = gain, dépôt/ravitaillement = perte utile : les deux sont
+-- une action réussie, donc le même accent positif dans les deux sens).
+local function punchOnChange(key: string, row: TextLabel, value: number, steady: Color3)
+	local previous = previousGameplay[key]
+	if previous ~= nil and value ~= previous then
+		punch(row, Colors.Good, steady)
+	end
+	previousGameplay[key] = value
+end
+
+-- Punch seulement à la hausse (santé) ou (carburant) : une baisse de carburant par la
+-- consommation normale ne doit pas clignoter à chaque seconde.
+local function punchOnRise(key: string, row: TextLabel, value: number, steady: Color3)
+	local previous = previousGameplay[key]
+	if previous ~= nil and value > previous then
+		punch(row, Colors.Good, steady)
+	end
+	previousGameplay[key] = value
+end
+
+local function refreshGameplay()
+	local state = GameplayStateClient.get()
+	local healthRow = gameplayRow("Health", 1)
+	healthRow.Text = `{Strings.format("Hud.Health")} : {math.floor(state.health)}/{math.floor(state.maxHealth)}`
+	local healthColor = if state.health <= state.maxHealth * 0.3 then Colors.Bad else Colors.Text
+	healthRow.TextColor3 = healthColor
+	local previousHealth = previousGameplay.Health
+	if previousHealth ~= nil and state.health ~= previousHealth then
+		punch(healthRow, if state.health > previousHealth then Colors.Good else Colors.Bad, healthColor)
+	end
+	previousGameplay.Health = state.health
+
+	local essenceRow = gameplayRow("Essence", 2)
+	essenceRow.Text = `{Strings.format("Resource.Essence")} : {state.essence}`
+	punchOnChange("Essence", essenceRow, state.essence, Colors.Text)
+
+	local steakRow = gameplayRow("SuspectSteak", 3)
+	steakRow.Text = `{Strings.format("Resource.SuspectSteak")} : {state.suspectSteak}`
+	punchOnChange("SuspectSteak", steakRow, state.suspectSteak, Colors.Text)
+
+	local breadRow = gameplayRow("RoadBread", 4)
+	breadRow.Text = `{Strings.format("Resource.RoadBread")} : {state.roadBread}`
+	punchOnChange("RoadBread", breadRow, state.roadBread, Colors.Text)
+
+	local fuelRow = gameplayRow("Fuel", 5)
+	fuelRow.Text = `{Strings.format("Hud.Fuel")} : {math.floor(state.fuel)}/{math.floor(state.fuelCapacity)}`
+	local fuelColor = if state.safeZoneActive then Colors.Good else Colors.Bad
+	fuelRow.TextColor3 = fuelColor
+	punchOnRise("Fuel", fuelRow, state.fuel, fuelColor)
+
+	gameplayRow("SafeZone", 6).Text =
+		Strings.format(if state.safeZoneActive then "Hud.SafeZone.Active" else "Hud.SafeZone.Inactive")
+
+	local orderRow = gameplayRow("Order", 7)
+	if state.orderStatus == "" then
+		orderRow.Text = Strings.format("Hud.Order.None")
+	else
+		local recipe = GameplayStateClient.getOrderRecipe()
+		local recipeName = if recipe then Strings.format(recipe.NameKey) else state.orderRecipeId
+		orderRow.Text = Strings.format("Hud.Order.Active", {
+			recipe = recipeName,
+			status = Strings.format(`Hud.Order.Status.{state.orderStatus}`),
+		})
+	end
+
+	local ingredientsRow = gameplayRow("OrderIngredients", 8)
+	local recipe = if state.orderStatus == "" then nil else GameplayStateClient.getOrderRecipe()
+	if recipe == nil then
+		ingredientsRow.Text = ""
+	else
+		local parts = {}
+		for resource, amount in recipe.Ingredients do
+			table.insert(parts, `{amount}× {Strings.format(`Resource.{resource}`)}`)
+		end
+		ingredientsRow.Text = table.concat(parts, ", ")
+	end
+	-- Une ligne vide garderait sa hauteur dans la liste : on la masque.
+	ingredientsRow.Visible = ingredientsRow.Text ~= ""
 end
 
 -- Fil de notifications (en bas à gauche) ---------------------------------------------------
@@ -187,7 +350,8 @@ local function push(text: string)
 		if entry.Parent == nil then
 			return
 		end
-		local fade = TweenService:Create(entry, TweenInfo.new(0.6), { TextTransparency = 1, BackgroundTransparency = 1 })
+		local fade =
+			TweenService:Create(entry, TweenInfo.new(0.6), { TextTransparency = 1, BackgroundTransparency = 1 })
 		fade.Completed:Connect(function()
 			entry:Destroy()
 		end)
@@ -237,6 +401,9 @@ for _, player in Players:GetPlayers() do
 	watch(player)
 end
 rebuildTeam(nil)
+
+GameplayStateClient.Changed:Connect(refreshGameplay)
+refreshGameplay()
 
 MatchStateClient.Changed:Connect(refreshTop)
 local elapsed = 0

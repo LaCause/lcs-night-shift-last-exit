@@ -10,9 +10,14 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage.Shared
 local Log = require(Shared.Util.Log)
 local Types = require(Shared.Types)
+local EnemyService = require(script.Parent.EnemyService)
+local GeneratorService = require(script.Parent.GeneratorService)
+local HealthService = require(script.Parent.HealthService)
+local InventoryService = require(script.Parent.InventoryService)
 local MatchService = require(script.Parent.MatchService)
 local NetService = require(script.Parent.NetService)
 local NotifyService = require(script.Parent.NotifyService)
+local OrderService = require(script.Parent.OrderService)
 local SessionService = require(script.Parent.SessionService)
 local VisualService = require(script.Parent.VisualService)
 
@@ -130,6 +135,55 @@ function DevService.Init()
 			`Modèle construit : {yesNo(model ~= nil)}`,
 			`Remplaçant en primitives utilisé : {yesNo(usedFallback)}`,
 		})
+		return nil
+	end)
+
+	DevService.command("SpawnEnemy", function(player)
+		EnemyService.spawnAt("EnemySpawn")
+		DevService.report(player, "Ennemi", { "Apparition demandée à EnemySpawn" })
+		return nil
+	end)
+
+	DevService.command("ForceOrderResult", function(player, payload)
+		local applied = OrderService.forceResult(payload.result)
+		DevService.report(player, "Commande", {
+			if applied then `Résultat forcé : {payload.result}` else "Ignorée : aucune commande active",
+		})
+		return nil
+	end)
+
+	-- 002-premier-increment-jouable : commandes de test du gameplay.
+	DevService.command("GiveResources", function(player, payload)
+		local added = InventoryService.addPersonal(player, payload.resource, payload.amount)
+		DevService.report(player, "Ressources", {
+			if added then `+{payload.amount} {payload.resource}` else "Refusé : inventaire plein",
+		})
+		return nil
+	end)
+
+	DevService.command("ShowGameplayState", function(player)
+		local lines = {}
+		for _, resourceType in { "Essence", "SuspectSteak", "RoadBread" } do
+			table.insert(lines, `{resourceType} porté : {player:GetAttribute(`Inv_{resourceType}`) or 0}`)
+		end
+		local stock = ReplicatedStorage:FindFirstChild("Stock")
+		if stock then
+			table.insert(
+				lines,
+				`Stock — SuspectSteak : {stock:GetAttribute("SuspectSteak") or 0}, RoadBread : {stock:GetAttribute("RoadBread") or 0}`
+			)
+		end
+		local generatorState = ReplicatedStorage:FindFirstChild("GeneratorState")
+		if generatorState then
+			table.insert(
+				lines,
+				`Générateur — carburant : {generatorState:GetAttribute("Fuel") or 0}/{generatorState:GetAttribute("Capacity") or 0}, zone de sécurité : {yesNo(GeneratorService.isSafeZoneActive())}`
+			)
+		end
+		local recipeId, status = OrderService.getStatus()
+		table.insert(lines, `Commande — {if recipeId == "" then "aucune" else recipeId} : {if status == "" then "—" else status}`)
+		table.insert(lines, `Santé : {HealthService.get(player) or 0}/{player:GetAttribute("MaxHealth") or 0}`)
+		DevService.report(player, "État du gameplay", lines)
 		return nil
 	end)
 

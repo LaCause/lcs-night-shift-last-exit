@@ -65,6 +65,56 @@ local TEXTS: { [string]: string } = {
 	["Dev.Checklist"] = "Checklist requêtes",
 	["Dev.ContextPlaceholder"] = "contexte des tirages",
 	["Dev.State"] = "{phase} · nuit {night}/{totalNights} · {time} · test : {testProfile}",
+
+	-- 002-premier-increment-jouable : ressources (noms affichés)
+	["Resource.Essence"] = "Essence",
+	["Resource.SuspectSteak"] = "Steak suspect",
+	["Resource.RoadBread"] = "Pain de route",
+
+	-- Forêt et récolte
+	["Forest.HarvestAction"] = "Récolter",
+
+	-- Comptoir : dépôt au stock partagé
+	["Counter.DepositAction"] = "Déposer",
+	["Counter.DepositObject"] = "Stock du restaurant",
+
+	-- Générateur
+	["Generator.RefuelAction"] = "Ravitailler",
+	["Generator.RefuelObject"] = "Générateur",
+	["Notify.GeneratorEmpty"] = "Le générateur est à sec. Le néon s'éteint.",
+	["Notify.GeneratorRefueled"] = "Le générateur repart. Le néon se rallume.",
+	["Hud.Fuel"] = "Carburant",
+	["Hud.SafeZone.Active"] = "Néon allumé",
+	["Hud.SafeZone.Inactive"] = "Néon éteint",
+
+	-- Cuisine et commande
+	["Kitchen.PrepareAction"] = "Préparer",
+	["Kitchen.PrepareObject"] = "Plan de travail",
+	["Kitchen.DeliverAction"] = "Livrer",
+	["Kitchen.DeliverObject"] = "Fenêtre du drive-thru",
+	["Kitchen.Recipe.SuspectBurger"] = "Burger suspect",
+	["Notify.OrderStarted"] = "Nouvelle commande : {recipe}. Prête avant la fin de la nuit.",
+	["Notify.OrderPrepared"] = "Commande prête : {recipe}. File vers la fenêtre !",
+	["Notify.OrderDelivered"] = "Commande livrée : {recipe} !",
+	["Notify.OrderFailed"] = "Commande manquée : {recipe}. Quelque chose approche…",
+	["Hud.Order.None"] = "Aucune commande en cours",
+	["Hud.Order.Active"] = "{recipe} · {status}",
+	["Hud.Order.Status.Pending"] = "en attente",
+	["Hud.Order.Status.Prepared"] = "prête à livrer",
+	["Hud.Order.Status.Delivered"] = "livrée",
+	["Hud.Order.Status.Failed"] = "manquée",
+
+	-- Ennemi et santé
+	["Notify.EnemyHit"] = "Une présence vous a touché dans le noir.",
+	["Hud.Health"] = "Santé",
+	["Hud.Resources"] = "Ressources",
+
+	-- Panneau de développement, ajouts 002-premier-increment-jouable
+	["Dev.GiveResources"] = "Ressources +1",
+	["Dev.OrderDeliver"] = "Commande réussie",
+	["Dev.OrderFail"] = "Commande échouée",
+	["Dev.SpawnEnemy"] = "Invoquer l'ennemi",
+	["Dev.ShowGameplayState"] = "État du gameplay",
 }
 
 local warned: { [string]: boolean } = {}

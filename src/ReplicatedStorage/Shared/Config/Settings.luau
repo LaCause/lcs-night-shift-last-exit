@@ -33,6 +33,8 @@ return {
 		MaxPlayers = { value = 6, default = 6, min = 1, max = 6, kind = "integer" },
 		-- Délai de réapparition d'un joueur en vie, en secondes.
 		RespawnDelay = { value = 5, default = 5, min = 0, max = 60, test = 1 },
+		-- Santé au début de chaque partie (002-premier-increment-jouable).
+		MaxHealth = { value = 100, default = 100, min = 10, max = 500, kind = "integer" },
 	},
 
 	Net = {
@@ -74,5 +76,76 @@ return {
 		LogLevel = { value = "Info", default = "Info", choices = { "Debug", "Info", "Warn", "Error" } },
 		-- Nom d'un système à faire échouer au démarrage (Studio uniquement), pour tester l'isolation.
 		FailSystemAtInit = { value = "", default = "", maxLength = 64 },
+	},
+
+	-- 002-premier-increment-jouable : forêt et points de ressource.
+	Forest = {
+		-- Nombre de nœuds générés par partie, par type de ressource.
+		NodeCountEssence = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
+		NodeCountSuspectSteak = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
+		NodeCountRoadBread = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
+		-- Distance au centre du restaurant, en studs.
+		AreaMinRadius = { value = 40, default = 40, min = 20, max = 100 },
+		AreaMaxRadius = { value = 150, default = 150, min = 60, max = 400 },
+		-- Portée de récolte d'un nœud, en studs.
+		HarvestRange = { value = 8, default = 8, min = 4, max = 20 },
+		-- Délai avant qu'un nœud récolté redevienne disponible, en secondes.
+		RespawnDelay = { value = 90, default = 90, min = 10, max = 600, test = 15 },
+		-- Total d'objets portés par un joueur, toutes ressources confondues.
+		InventoryCapacity = { value = 10, default = 10, min = 1, max = 50, kind = "integer" },
+	},
+
+	-- 002-premier-increment-jouable : générateur, néon et zone de sécurité.
+	Generator = {
+		-- Niveau maximal de carburant.
+		Capacity = { value = 100, default = 100, min = 10, max = 1000 },
+		-- Niveau au début de chaque partie.
+		InitialFuel = { value = 60, default = 60, min = 0, max = 1000 },
+		-- Consommation par seconde pendant une phase active (Jour/Nuit/Évasion).
+		DrainPerSecond = { value = 0.2, default = 0.2, min = 0, max = 10, test = 2 },
+		-- Carburant ajouté par unité d'essence déposée.
+		FuelPerEssence = { value = 15, default = 15, min = 1, max = 200, kind = "integer" },
+		-- Portée pour déposer de l'essence, en studs.
+		InteractRange = { value = 8, default = 8, min = 4, max = 20 },
+		-- Rayon de la zone de sécurité autour de SafeZoneCenter, en studs.
+		SafeZoneRadius = { value = 20, default = 20, min = 5, max = 100 },
+	},
+
+	-- 002-premier-increment-jouable : préparation et livraison de la commande.
+	Kitchen = {
+		-- Portée pour préparer la commande au plan de travail, en studs.
+		PrepareRange = { value = 8, default = 8, min = 4, max = 20 },
+		-- Portée pour livrer à la fenêtre du drive-thru, en studs.
+		DeliverRange = { value = 8, default = 8, min = 4, max = 20 },
+	},
+
+	-- 002-premier-increment-jouable : ennemi apparu après une commande en échec.
+	Enemy = {
+		-- Dégâts infligés par contact.
+		ContactDamage = { value = 20, default = 20, min = 1, max = 100 },
+		-- Distance de contact, en studs.
+		ContactRange = { value = 5, default = 5, min = 1, max = 20 },
+		-- Délai minimal entre deux contacts sur un même joueur, en secondes.
+		ContactCooldown = { value = 1.5, default = 1.5, min = 0.2, max = 10 },
+		-- Vitesse de déplacement, en studs par seconde.
+		MoveSpeed = { value = 14, default = 14, min = 1, max = 50 },
+		-- Fréquence de recalcul du chemin, en secondes.
+		RepathInterval = { value = 1, default = 1, min = 0.2, max = 10 },
+		-- Délai sans cible atteignable avant repli, en secondes.
+		GiveUpDelay = { value = 12, default = 12, min = 1, max = 120, test = 5 },
+		-- Durée de vie maximale avant disparition, en secondes.
+		MaxLifetime = { value = 90, default = 90, min = 5, max = 600, test = 20 },
+	},
+
+	-- 002-premier-increment-jouable : transition d'éclairage et de brouillard entre phases.
+	Ambiance = {
+		-- Durée du fondu entre l'état Jour et l'état Nuit, en secondes.
+		TransitionDuration = { value = 8, default = 8, min = 1, max = 60, test = 2 },
+		-- Lighting.Brightness pour chaque état.
+		DayBrightness = { value = 2, default = 2, min = 0, max = 5 },
+		NightBrightness = { value = 0.4, default = 0.4, min = 0, max = 5 },
+		-- Lighting.FogEnd pour chaque état ; une valeur élevée = brouillard quasi absent.
+		DayFogEnd = { value = 100000, default = 100000, min = 100, max = 100000, kind = "integer" },
+		NightFogEnd = { value = 220, default = 220, min = 20, max = 2000, kind = "integer" },
 	},
 }

@@ -18,6 +18,11 @@ type RejectCode = Types.RejectCode
 
 export type Handler = (player: Player, payload: { [string]: any }) -> RejectCode?
 
+-- Résolveur de cible optionnel (002-premier-increment-jouable, research R3) : remplace
+-- RefPoints.find pour une cible dynamique (ex. un nœud de ressource). Doit lui-même valider le
+-- type de l'identifiant et renvoyer nil si la cible n'existe pas ou n'est plus valide.
+export type TargetResolver = (targetId: any) -> BasePart?
+
 export type Rejection = {
 	at: number,
 	userId: number,
@@ -36,6 +41,7 @@ local log = Log.new("Net")
 local isStudio = RunService:IsStudio()
 
 local handlers: { [string]: Handler } = {}
+local resolvers: { [string]: TargetResolver } = {}
 local remotes: { [string]: RemoteEvent } = {}
 local buckets: { [Player]: Bucket } = {}
 local throttles: { [string]: Throttle } = {}
@@ -180,7 +186,11 @@ local function onIntent(player: Player, action: any, payload: any)
 			return
 		end
 		local targetId = data[targetSpec.field]
-		local target = if RefPoints.isValid(targetId) then RefPoints.find(targetId) else nil
+		local resolve = resolvers[action]
+		local target = if resolve ~= nil
+			then resolve(targetId)
+			elseif RefPoints.isValid(targetId) then RefPoints.find(targetId)
+			else nil
 		if target == nil then
 			reject(player, label, "TargetMissing", `cible {tostring(targetId)}`)
 			return
@@ -208,7 +218,9 @@ end
 
 -- Associe un gestionnaire à une intention déclarée dans Remotes.luau. Les métadonnées de
 -- validation (schéma, phases, cible, devOnly) viennent de la déclaration, jamais d'ici.
-function NetService.registerIntent(name: string, definition: { handler: Handler })
+-- `resolve` est optionnel (research R3) : fourni par le service propriétaire pour une cible
+-- dynamique (ex. un nœud de ressource) ; sans lui, la cible est cherchée par RefPoints.find.
+function NetService.registerIntent(name: string, definition: { handler: Handler, resolve: TargetResolver? })
 	local declaration = Remotes.Intents[name]
 	if declaration == nil then
 		error(`Intention non déclarée dans Remotes.luau : {name}`, 2)
@@ -221,6 +233,9 @@ function NetService.registerIntent(name: string, definition: { handler: Handler 
 		rangeFor(targetSpec.rangeSetting) -- vérifie dès l'enregistrement que la portée existe
 	end
 	handlers[name] = definition.handler
+	if definition.resolve ~= nil then
+		resolvers[name] = definition.resolve
+	end
 end
 
 function NetService.remote(name: string): RemoteEvent

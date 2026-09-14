@@ -7,6 +7,12 @@ export type MatchResult = "Victory" | "Defeat"
 
 export type PlayerStatus = "Alive" | "Eliminated"
 
+-- Ressources récoltables en forêt (002-premier-increment-jouable, data-model.md).
+export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread"
+
+-- État de la commande de la nuit (data-model.md, « Commande »).
+export type OrderStatus = "" | "Pending" | "Prepared" | "Delivered" | "Failed"
+
 export type RejectCode = "BadEnvelope"
 	| "UnknownAction"
 	| "NotAllowed"
@@ -18,6 +24,12 @@ export type RejectCode = "BadEnvelope"
 	| "TooFar"
 	| "Cooldown"
 	| "HandlerError"
+	-- Ajoutés par 002-premier-increment-jouable (contracts/network.md).
+	| "NodeUnavailable"
+	| "InventoryFull"
+	| "MissingIngredients"
+	| "NotPrepared"
+	| "OrderClosed"
 
 export type RefPointId = "Spawn"
 	| "DriveThruWindow"
@@ -30,6 +42,8 @@ export type RefPointId = "Spawn"
 	| "NeonSign"
 	| "SafeZoneCenter"
 	| "BusSpot"
+	-- Ajouté par 002-premier-increment-jouable (research R10).
+	| "EnemySpawn"
 
 -- Contrat de système chargé par Shared/Util/Loader (serveur : Services/, client : Controllers/).
 export type System = {

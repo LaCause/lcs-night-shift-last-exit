@@ -8,7 +8,8 @@
         "$path": "src/ReplicatedStorage/Shared"
       },
       "Assets": {
-        "$className": "Folder"
+        "$className": "Folder",
+        "$ignoreUnknownInstances": true
       }
     },
     "ServerScriptService": {

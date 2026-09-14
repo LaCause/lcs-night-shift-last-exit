@@ -26,10 +26,14 @@ local refPoints: { [string]: RefPointSpec } = {
 	CounterBell = { cframe = CFrame.new(3, 5.3, -6), size = Vector3.new(1, 1, 1) },
 	Worktop = { cframe = CFrame.new(6, 4.5, 6) },
 	Fryer = { cframe = CFrame.new(-6, 5, 6) },
-	Generator = { cframe = CFrame.new(-14, 3, 18) },
+	-- Devant le générateur (GeneratorBody dans Catalog.luau, centré en (-14, 2.4, 18) sur la
+	-- dalle GeneratorPad) : au bord sud de la dalle, pas dans le volume solide du décor.
+	Generator = { cframe = CFrame.new(-14, 1, 21.5) },
 	NeonSign = { cframe = CFrame.new(-28, 20, -38) },
 	SafeZoneCenter = { cframe = CFrame.new(0, 2, 0) },
 	BusSpot = { cframe = CFrame.new(36, 1, 22) },
+	-- En lisière de forêt, au nord, au-delà de Forest.AreaMaxRadius (002-premier-increment-jouable).
+	EnemySpawn = { cframe = CFrame.new(0, 1, 180) },
 }
 
 return table.freeze({

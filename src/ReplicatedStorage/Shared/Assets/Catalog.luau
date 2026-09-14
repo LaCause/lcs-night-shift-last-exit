@@ -40,6 +40,17 @@ local COLORS = {
 	NeonCyan = Color3.fromRGB(70, 235, 255),
 	Warning = Color3.fromRGB(255, 80, 60),
 	Pole = Color3.fromRGB(90, 90, 96),
+	-- 002-premier-increment-jouable : nœuds de ressource et ennemi.
+	FuelCanister = Color3.fromRGB(200, 70, 50),
+	CoolerBody = Color3.fromRGB(90, 150, 140),
+	CoolerLid = Color3.fromRGB(220, 220, 210),
+	VendingBody = Color3.fromRGB(210, 60, 90),
+	VendingGlass = Color3.fromRGB(170, 210, 220),
+	EnemyBody = Color3.fromRGB(70, 60, 80),
+	EnemyEye = Color3.fromRGB(255, 230, 90),
+	-- Repères visuels flottants (dépôt, à préparer, à livrer) : remplaçants en primitives.
+	CueBag = Color3.fromRGB(196, 154, 96),
+	CueReady = Color3.fromRGB(222, 140, 60),
 }
 
 -- Oriente l'axe X d'un cylindre vers le haut.
@@ -53,7 +64,14 @@ local function newModel(name: string): Model
 	return model
 end
 
-local function block(model: Model, name: string, size: Vector3, cframe: CFrame, color: Color3, options: PartOptions?): Part
+local function block(
+	model: Model,
+	name: string,
+	size: Vector3,
+	cframe: CFrame,
+	color: Color3,
+	options: PartOptions?
+): Part
 	local opts: PartOptions = options or {}
 	local part = Instance.new("Part")
 	part.Name = name
@@ -91,7 +109,14 @@ local function buildRestaurant(): Model
 	local wallY = FLOOR_TOP + WALL_HEIGHT / 2
 
 	-- Sol, parking et voie du drive-thru.
-	block(model, "Floor", Vector3.new(40, 1, 28), CFrame.new(0, 0.5, 0), COLORS.Tile, { material = Enum.Material.Marble })
+	block(
+		model,
+		"Floor",
+		Vector3.new(40, 1, 28),
+		CFrame.new(0, 0.5, 0),
+		COLORS.Tile,
+		{ material = Enum.Material.Marble }
+	)
 	block(model, "Parking", Vector3.new(44, 0.4, 26), CFrame.new(-2, 0.2, -27), COLORS.Asphalt, {
 		material = Enum.Material.Asphalt,
 	})
@@ -167,9 +192,16 @@ local function buildRestaurant(): Model
 	end
 	for _, x in { -12, 12 } do
 		block(model, "TableLeg", Vector3.new(0.6, 2.6, 0.6), CFrame.new(x, FLOOR_TOP + 1.3, -9), COLORS.DarkSteel)
-		block(model, "TableTop", Vector3.new(0.4, 4, 4), CFrame.new(x, FLOOR_TOP + 2.8, -9) * VERTICAL, COLORS.WallTrim, {
-			shape = Enum.PartType.Cylinder,
-		})
+		block(
+			model,
+			"TableTop",
+			Vector3.new(0.4, 4, 4),
+			CFrame.new(x, FLOOR_TOP + 2.8, -9) * VERTICAL,
+			COLORS.WallTrim,
+			{
+				shape = Enum.PartType.Cylinder,
+			}
+		)
 	end
 
 	-- Interphone, sur la voie du drive-thru.
@@ -189,9 +221,16 @@ local function buildRestaurant(): Model
 	block(model, "GeneratorBody", Vector3.new(5, 4, 3), CFrame.new(-14, 2.4, 18), COLORS.Generator, {
 		material = Enum.Material.Metal,
 	})
-	block(model, "GeneratorExhaust", Vector3.new(2, 0.6, 0.6), CFrame.new(-12.2, 5.4, 18.8) * VERTICAL, COLORS.DarkSteel, {
-		shape = Enum.PartType.Cylinder,
-	})
+	block(
+		model,
+		"GeneratorExhaust",
+		Vector3.new(2, 0.6, 0.6),
+		CFrame.new(-12.2, 5.4, 18.8) * VERTICAL,
+		COLORS.DarkSteel,
+		{
+			shape = Enum.PartType.Cylinder,
+		}
+	)
 	block(model, "GeneratorLight", Vector3.new(0.3, 0.3, 0.3), CFrame.new(-11.4, 3.2, 18), COLORS.Warning, {
 		material = Enum.Material.Neon,
 		collide = false,
@@ -290,6 +329,110 @@ local function buildBus(): Model
 	return finish(model)
 end
 
+-- 002-premier-increment-jouable : nœuds de ressource de la forêt. Chaque modèle a un
+-- PrimaryPart, sur lequel ForestService accroche le ProximityPrompt et bascule la
+-- disponibilité (transparence, collision, prompt actif) — même principe que CounterBell.
+local function buildFuelCanister(): Model
+	local model = newModel("FuelCanister")
+	local body = block(model, "Body", Vector3.new(1.4, 2, 1.4), CFrame.new(0, 1, 0), COLORS.FuelCanister, {
+		material = Enum.Material.Metal,
+	})
+	block(model, "Cap", Vector3.new(0.5, 0.4, 0.5), CFrame.new(0, 2.2, 0), COLORS.DarkSteel, {
+		material = Enum.Material.Metal,
+	})
+	block(model, "Handle", Vector3.new(0.9, 0.2, 0.3), CFrame.new(0, 1.9, 0.6), COLORS.DarkSteel)
+	model.PrimaryPart = body
+	return finish(model)
+end
+
+local function buildSuspectCooler(): Model
+	local model = newModel("SuspectCooler")
+	local body = block(model, "Body", Vector3.new(2, 1.4, 1.4), CFrame.new(0, 0.7, 0), COLORS.CoolerBody, {
+		material = Enum.Material.Plastic,
+	})
+	block(model, "Lid", Vector3.new(2.1, 0.3, 1.5), CFrame.new(0, 1.5, 0), COLORS.CoolerLid)
+	model.PrimaryPart = body
+	return finish(model)
+end
+
+local function buildRoadVendingMachine(): Model
+	local model = newModel("RoadVendingMachine")
+	local body = block(model, "Body", Vector3.new(1.6, 3, 1.2), CFrame.new(0, 1.5, 0), COLORS.VendingBody, {
+		material = Enum.Material.Metal,
+	})
+	block(model, "Glass", Vector3.new(1.2, 1.8, 0.1), CFrame.new(0, 1.9, 0.65), COLORS.VendingGlass, {
+		material = Enum.Material.Glass,
+		transparency = 0.2,
+	})
+	model.PrimaryPart = body
+	return finish(model)
+end
+
+-- 002-premier-increment-jouable : ennemi apparu après une commande en échec. Silhouette
+-- originale, non graphique (principe VIII) : un contour sombre et deux yeux pâles.
+local function buildEnemy(): Model
+	local model = newModel("Enemy")
+	local torso = block(model, "Torso", Vector3.new(2, 4, 1.2), CFrame.new(0, 2.5, 0), COLORS.EnemyBody, {
+		material = Enum.Material.SmoothPlastic,
+	})
+	block(model, "Head", Vector3.new(1.4, 1.2, 1.2), CFrame.new(0, 5, 0), COLORS.EnemyBody)
+	for _, x in { -0.3, 0.3 } do
+		block(model, "Eye", Vector3.new(0.2, 0.2, 0.1), CFrame.new(x, 5.1, 0.6), COLORS.EnemyEye, {
+			material = Enum.Material.Neon,
+			collide = false,
+		})
+	end
+	model.PrimaryPart = torso
+	return finish(model)
+end
+
+-- 002-premier-increment-jouable : repères visuels flottants au comptoir, au plan de travail et
+-- à la fenêtre du drive-thru (FeedbackVisualService). ModelName pointe vers un modèle du
+-- marketplace inséré manuellement dans ReplicatedStorage.Assets (Roblox refuse
+-- InsertService:LoadAsset pour un asset Creator Store non possédé depuis un script serveur, même
+-- gratuit — voir default.project.json, Assets a $ignoreUnknownInstances pour que Rojo ne l'efface
+-- pas). Ces primitives restent le remplaçant si le modèle est absent (place fraîchement
+-- reconstruite, pas encore réinséré) ou si Visuals.PrimitivesOnly est actif, comme tout le
+-- catalogue (FR-041).
+local function buildDepositCue(): Model
+	local model = newModel("DepositCue")
+	block(model, "Bag", Vector3.new(1.6, 2, 1), CFrame.new(0, 1, 0), COLORS.CueBag, {
+		material = Enum.Material.Fabric,
+		collide = false,
+	})
+	block(model, "Fold", Vector3.new(1.6, 0.4, 1), CFrame.new(0, 2.1, 0), COLORS.CueBag, {
+		material = Enum.Material.Fabric,
+		collide = false,
+	})
+	return finish(model)
+end
+
+local function buildPrepareCue(): Model
+	local model = newModel("PrepareCue")
+	block(model, "Pan", Vector3.new(1.6, 0.15, 1.6), CFrame.new(0, 0.08, 0), COLORS.DarkSteel, {
+		material = Enum.Material.Metal,
+		collide = false,
+	})
+	block(model, "Handle", Vector3.new(1.2, 0.12, 0.3), CFrame.new(1.1, 0.08, 0), COLORS.DarkSteel, {
+		material = Enum.Material.Metal,
+		collide = false,
+	})
+	return finish(model)
+end
+
+local function buildDeliverCue(): Model
+	local model = newModel("DeliverCue")
+	block(model, "Bag", Vector3.new(1.4, 1.8, 1), CFrame.new(0, 0.9, 0), COLORS.CueReady, {
+		material = Enum.Material.SmoothPlastic,
+		collide = false,
+	})
+	block(model, "Fold", Vector3.new(1.4, 0.3, 1), CFrame.new(0, 1.85, 0), COLORS.CueReady, {
+		material = Enum.Material.SmoothPlastic,
+		collide = false,
+	})
+	return finish(model)
+end
+
 local function buildFallbackProbe(): Model
 	local model = newModel("FallbackProbe")
 	block(model, "Probe", Vector3.new(2, 2, 2), CFrame.new(0, 1, 0), COLORS.NeonPink, { material = Enum.Material.Neon })
@@ -301,6 +444,15 @@ local Catalog: { [string]: Entry } = {
 	Restaurant = { BuildFallback = buildRestaurant },
 	NeonSign = { BuildFallback = buildNeonSign },
 	Bus = { BuildFallback = buildBus },
+	-- 002-premier-increment-jouable : nœuds de ressource, toujours en primitives (originaux).
+	FuelCanister = { BuildFallback = buildFuelCanister },
+	SuspectCooler = { BuildFallback = buildSuspectCooler },
+	RoadVendingMachine = { BuildFallback = buildRoadVendingMachine },
+	Enemy = { BuildFallback = buildEnemy },
+	-- 002-premier-increment-jouable : repères visuels, marketplace + repli en primitives.
+	DepositCue = { ModelName = "DepositCueModel", BuildFallback = buildDepositCue },
+	PrepareCue = { ModelName = "PrepareCueModel", BuildFallback = buildPrepareCue },
+	DeliverCue = { ModelName = "DeliverCueModel", BuildFallback = buildDeliverCue },
 	-- Entrée de test (Dev.TestVisualFallback) : son modèle est volontairement absent.
 	FallbackProbe = { ModelName = "__FallbackProbeMissing", BuildFallback = buildFallbackProbe, TestOnly = true },
 }
