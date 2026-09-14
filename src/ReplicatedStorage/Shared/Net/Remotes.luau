@@ -20,11 +20,45 @@ local ACTIVE = { "Day", "Night", "Escape" }
 local NOT_WAITING = { "Countdown", "Day", "Night", "Escape", "Ended" }
 local EMPTY = Validate.object({})
 
+local NIGHT_ONLY = { "Night" }
+
 local intents: { [string]: IntentDecl } = {
 	RingBell = {
 		schema = Validate.object({ target = Validate.string(maxString) }),
 		phases = PLAYABLE,
 		target = { field = "target", rangeSetting = "Bell.Range" },
+	},
+
+	-- 002-premier-increment-jouable (contracts/network.md).
+	HarvestResource = {
+		-- Clé "target" (et non "node") : InteractionController envoie {target = ...} pour toute
+		-- invite de proximité, quelle que soit l'intention (research R8).
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Forest.HarvestRange" }, -- résolu par ForestService.findNode
+	},
+	-- Ces quatre intentions visent chacune un point de référence fixe unique ; le schéma reste
+	-- un `target` générique (comme RingBell) et le gestionnaire vérifie l'identifiant exact
+	-- (défense en profondeur, même motif que BellService).
+	DepositResources = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Forest.HarvestRange" },
+	},
+	RefuelGenerator = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Generator.InteractRange" },
+	},
+	PrepareOrder = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = NIGHT_ONLY,
+		target = { field = "target", rangeSetting = "Kitchen.PrepareRange" },
+	},
+	DeliverOrder = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = NIGHT_ONLY,
+		target = { field = "target", rangeSetting = "Kitchen.DeliverRange" },
 	},
 
 	["Dev.Ping"] = { schema = EMPTY, devOnly = true },
@@ -59,6 +93,21 @@ local intents: { [string]: IntentDecl } = {
 		devOnly = true,
 	},
 	["Dev.TestVisualFallback"] = { schema = EMPTY, devOnly = true },
+
+	-- 002-premier-increment-jouable (contracts/server-api.md, commandes de dev ajoutées).
+	["Dev.GiveResources"] = {
+		schema = Validate.object({
+			resource = Validate.enum({ "Essence", "SuspectSteak", "RoadBread" }),
+			amount = Validate.integer(1, 50),
+		}),
+		devOnly = true,
+	},
+	["Dev.ShowGameplayState"] = { schema = EMPTY, devOnly = true },
+	["Dev.ForceOrderResult"] = {
+		schema = Validate.object({ result = Validate.enum({ "Delivered", "Failed" }) }),
+		devOnly = true,
+	},
+	["Dev.SpawnEnemy"] = { schema = EMPTY, devOnly = true },
 }
 
 local Remotes = {
@@ -74,6 +123,20 @@ local Remotes = {
 		"BellRang",
 		"MatchEnded",
 		"DevReport",
+		-- 002-premier-increment-jouable (contracts/network.md).
+		"GeneratorEmpty",
+		"GeneratorRefueled",
+		"OrderStarted",
+		"OrderDelivered",
+		"OrderFailed",
+		"EnemyHit",
+		-- Retour son/visuel léger (ciblé ou diffusé selon le cas) : ne remplace aucune de ces
+		-- notifications, ne sert qu'à déclencher un son/flash côté client (SfxController,
+		-- FeedbackFxController). Volontairement absentes du fil de notifications du HUD.
+		"ResourceHarvested",
+		"ResourceDeposited",
+		"GeneratorFueled",
+		"OrderPrepared",
 	}),
 }
 

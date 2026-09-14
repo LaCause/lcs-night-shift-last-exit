@@ -35,6 +35,10 @@ local MatchService = {
 	Priority = 50,
 	PhaseStarted = Signal.new("MatchService.PhaseStarted") :: Signal.Signal<Phase, number>,
 	PhaseEnded = Signal.new("MatchService.PhaseEnded") :: Signal.Signal<Phase, number>,
+	-- Déclenché en tout premier dans startNewMatch, avant la remise à zéro des sessions
+	-- (002-premier-increment-jouable, research R1) : les systèmes de gameplay dérivés de la
+	-- seed (forêt, générateur, santé…) s'y abonnent pour se régénérer/se réinitialiser.
+	MatchStarting = Signal.new("MatchService.MatchStarting") :: Signal.Signal<number, number>,
 	MatchStarted = Signal.new("MatchService.MatchStarted") :: Signal.Signal<number, number>,
 	MatchEnded = Signal.new("MatchService.MatchEnded") :: Signal.Signal<MatchResult, number>,
 }
@@ -124,6 +128,7 @@ local function startNewMatch(respawn: boolean)
 	state.seed = pickSeed()
 	state.totalNights = Config.get("Match", "NightCount")
 	state.result = ""
+	MatchService.MatchStarting:Fire(state.matchId, state.seed)
 	SessionService.resetAll()
 	if respawn then
 		SessionService.respawnAll()

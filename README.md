@@ -4,16 +4,20 @@ Jeu Roblox coopératif de 1 à 6 joueurs : un fast-food isolé au milieu d'une f
 des commandes absurdes la nuit, et un vieux bus à réparer pour s'enfuir. Le ton est « meme
 horror » : absurde, drôle, légèrement inquiétant.
 
-Ce dépôt contient pour l'instant le **socle technique** (fonctionnalité `001-socle-technique`) :
+Ce dépôt contient le **socle technique** (`001-socle-technique`) et son **premier incrément
+jouable** (`002-premier-increment-jouable`) :
 
 - projet Rojo aux outils figés ;
-- monde de départ provisoire ;
-- horloge de partie ;
-- canal d'actions validé par le serveur ;
-- réglages centralisés ;
-- outils de développement.
+- horloge de partie, canal d'actions validé par le serveur, réglages centralisés ;
+- une forêt basique avec des points de ressource à récolter (essence, steak suspect, pain de
+  route) ;
+- un générateur à ravitailler, qui alimente le néon et une zone de sécurité ;
+- une commande à préparer et livrer chaque nuit ;
+- un ennemi qui apparaît si la commande échoue, et une santé serveur par joueur ;
+- une ambiance jour/nuit (éclairage, brouillard) ;
+- des outils de développement.
 
-Le gameplay arrive avec le MVP. Les règles du projet sont dans
+Le bus et sa réparation arrivent avec un incrément suivant. Les règles du projet sont dans
 [.specify/memory/constitution.md](.specify/memory/constitution.md).
 
 ## Prérequis
@@ -60,11 +64,14 @@ serveur. Ils n'apparaissent donc qu'en mode Play, pas en mode Edit.
   `Settings.luau`, ou utilise le bouton « Profil test » du panneau de dev.
 - **Panneau de dev**, visible uniquement dans Studio : phase suivante, victoire ou défaite,
   élimination, état de la partie, tirages de la seed, checklist des requêtes invalides, test du
-  visuel de secours.
+  visuel de secours, ressources (`Dev.GiveResources`), état complet du gameplay
+  (`Dev.ShowGameplayState` : inventaire, stock, carburant, commande, santé), forcer le résultat
+  de la commande (`Dev.ForceOrderResult`), invoquer l'ennemi (`Dev.SpawnEnemy`).
 - **Contrôles statiques** : `selene src` et `stylua --check src`. Si selene réclame la
   bibliothèque standard Roblox, lance `selene generate-roblox-std`.
-- **Guide de validation complet** :
-  [specs/001-socle-technique/quickstart.md](specs/001-socle-technique/quickstart.md).
+- **Guides de validation complets** :
+  [specs/001-socle-technique/quickstart.md](specs/001-socle-technique/quickstart.md) et
+  [specs/002-premier-increment-jouable/quickstart.md](specs/002-premier-increment-jouable/quickstart.md).
 
 ## Publier
 
@@ -79,12 +86,16 @@ serveur. Ils n'apparaissent donc qu'en mode Play, pas en mode Edit.
 default.project.json            projet Rojo (dossiers du dépôt → services Roblox)
 rokit.toml                      versions figées des outils
 src/
-├── ReplicatedStorage/Shared/   modules partagés : Config, Net, Util, World, Assets, Client, Strings
+├── ReplicatedStorage/Shared/   modules partagés : Config, Net, Util, World, Assets, Kitchen, Client, Strings
 ├── ServerScriptService/Server/ logique d'autorité : Main.server.luau, Services/, World/Layout.luau
 ├── StarterPlayer/StarterPlayerScripts/Client/   logique locale : Main.client.luau, Controllers/
 └── StarterGui/                 écrans : HUD, EndScreen, DevPanel
 specs/                          spécifications Spec Kit (spec, plan, contrats, tâches)
 ```
+
+`Shared/Kitchen/Recipes.luau` (nouveau avec `002-premier-increment-jouable`) déclare les
+recettes des commandes de la nuit : données statiques, comme `Shared/Assets/Catalog.luau` pour
+les visuels.
 
 ## Réglages
 

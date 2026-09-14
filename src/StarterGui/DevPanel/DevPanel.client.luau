@@ -1,6 +1,10 @@
 --!strict
 -- Panneau de développement, Studio uniquement (FR-042, FR-043) : commandes Dev.*, ligne d'état,
 -- rapports du serveur et liste de contrôle des requêtes invalides (contracts/network.md, SC-006).
+--
+-- Disposition : colonne en haut à gauche, arrêtée au-dessus du fil de notifications du HUD
+-- (Hud.client.luau). Les commandes et le rapport défilent chacun dans leur zone, pour que rien
+-- ne sorte de l'écran quelle que soit sa hauteur.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -33,8 +37,12 @@ type Case = {
 type Pending = { cases: { Case }, notes: { string } }
 
 local Colors = UiKit.Colors
-local EXPANDED_SIZE = UDim2.fromOffset(280, 540)
-local COLLAPSED_SIZE = UDim2.fromOffset(280, 44)
+local PANEL_WIDTH = 270
+-- Le fil de notifications du HUD occupe 30 % de la hauteur en bas à gauche : le panneau
+-- s'arrête juste au-dessus (8 px de marge en haut, 8 px d'écart avec le fil).
+local EXPANDED_SIZE = UDim2.new(0, PANEL_WIDTH, 0.7, -28)
+local COLLAPSED_SIZE = UDim2.fromOffset(PANEL_WIDTH, 44)
+local RESOURCE_TYPES = { "Essence", "SuspectSteak", "RoadBread" }
 -- Doit correspondre au titre du rapport Dev.GetRejections (DevService.luau).
 local REJECTIONS_TITLE = "Refus récents"
 local BURST_SIZE = 30
@@ -42,7 +50,7 @@ local BURST_MIN_LIMITED = 20
 
 -- Construction du panneau --------------------------------------------------------------------
 
-local root = UiKit.frame(screen, "Root", EXPANDED_SIZE, UDim2.new(0, 12, 0, 60))
+local root = UiKit.frame(screen, "Root", EXPANDED_SIZE, UDim2.fromOffset(12, 8))
 UiKit.corner(root, 10)
 UiKit.stroke(root, Colors.Neon, 1.5)
 UiKit.padding(root, 8)
@@ -69,22 +77,43 @@ local stateLabel = UiKit.label(body, "State", "", UDim2.new(1, 0, 0, 36), {
 	maxSize = 15,
 })
 
+-- Sous la ligne d'état : 55 % pour les commandes, 45 % pour le rapport, 6 px entre les deux.
+local controls = Instance.new("ScrollingFrame")
+controls.Name = "Controls"
+controls.Position = UDim2.fromOffset(0, 42)
+controls.Size = UDim2.new(1, 0, 0.55, -26)
+controls.BackgroundTransparency = 1
+controls.BorderSizePixel = 0
+controls.ScrollBarThickness = 4
+controls.AutomaticCanvasSize = Enum.AutomaticSize.Y
+controls.CanvasSize = UDim2.new()
+controls.Parent = body
+local controlsPadding = Instance.new("UIPadding")
+controlsPadding.PaddingTop = UDim.new(0, 1)
+controlsPadding.PaddingBottom = UDim.new(0, 1)
+controlsPadding.PaddingLeft = UDim.new(0, 1)
+controlsPadding.PaddingRight = UDim.new(0, 8) -- place pour la barre de défilement
+controlsPadding.Parent = controls
+UiKit.list(controls, 6)
+
 local grid = Instance.new("Frame")
 grid.Name = "Buttons"
 grid.BackgroundTransparency = 1
-grid.Position = UDim2.fromOffset(0, 42)
-grid.Size = UDim2.new(1, 0, 0, 216)
-grid.Parent = body
+grid.Size = UDim2.fromScale(1, 0)
+grid.AutomaticSize = Enum.AutomaticSize.Y
+grid.LayoutOrder = 1
+grid.Parent = controls
 local gridLayout = Instance.new("UIGridLayout")
-gridLayout.CellSize = UDim2.new(0.5, -4, 0, 30)
+-- 34 px : deux lignes de texte à 14 px pour les libellés longs.
+gridLayout.CellSize = UDim2.new(0.5, -3, 0, 34)
 gridLayout.CellPadding = UDim2.fromOffset(6, 6)
 gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
 gridLayout.Parent = grid
 
 local contextBox = Instance.new("TextBox")
 contextBox.Name = "RngContext"
-contextBox.Position = UDim2.fromOffset(0, 264)
 contextBox.Size = UDim2.new(1, 0, 0, 28)
+contextBox.LayoutOrder = 2
 contextBox.BackgroundColor3 = Colors.Ink
 contextBox.BorderSizePixel = 0
 contextBox.ClearTextOnFocus = false
@@ -93,13 +122,13 @@ contextBox.PlaceholderText = Strings.format("Dev.ContextPlaceholder")
 contextBox.Text = "test"
 contextBox.TextColor3 = Colors.Text
 contextBox.TextSize = 14
-contextBox.Parent = body
+contextBox.Parent = controls
 UiKit.corner(contextBox, 6)
 
 local report = Instance.new("ScrollingFrame")
 report.Name = "Report"
-report.Position = UDim2.fromOffset(0, 300)
-report.Size = UDim2.new(1, 0, 1, -300)
+report.Position = UDim2.new(0, 0, 0.55, 22)
+report.Size = UDim2.new(1, 0, 0.45, -22)
 report.BackgroundColor3 = Colors.Ink
 report.BackgroundTransparency = 0.2
 report.BorderSizePixel = 0
@@ -133,6 +162,7 @@ local function showReport(title: string, lines: { string })
 	for _, text in lines do
 		addLine(text, Colors.Text, UiKit.Fonts.Body)
 	end
+	report.CanvasPosition = Vector2.zero
 end
 
 local function send(action: string, payload: { [string]: any })
@@ -336,7 +366,7 @@ local function runChecklist()
 	NetClient.send("Dev.GetRejections", { count = 50 })
 end
 
--- Boutons ------------------------------------------------------------------------------------
+-- Boutons (les plus utilisés en premier, visibles sans défiler) ------------------------------
 
 local buttonOrder = 0
 local function addButton(key: string, onClick: () -> ())
@@ -345,16 +375,33 @@ local function addButton(key: string, onClick: () -> ())
 	button.LayoutOrder = buttonOrder
 end
 
-addButton("Dev.Ping", function()
-	send("Dev.Ping", {})
-	showReport(Strings.format("Dev.Ping"), { "Envoyé (sans effet côté serveur)" })
-end)
 addButton("Dev.NextPhase", function()
 	send("Dev.NextPhase", {})
 end)
 addButton("Dev.TestProfile", function()
 	send("Dev.SetTestProfile", { enabled = not MatchStateClient.get().testProfile })
 end)
+
+-- 002-premier-increment-jouable : commandes de test du gameplay.
+addButton("Dev.ShowGameplayState", function()
+	send("Dev.ShowGameplayState", {})
+end)
+addButton("Dev.GiveResources", function()
+	-- Une unité de chaque ressource, dans la limite de Forest.InventoryCapacity.
+	for _, resource in RESOURCE_TYPES do
+		send("Dev.GiveResources", { resource = resource, amount = 1 })
+	end
+end)
+addButton("Dev.OrderDeliver", function()
+	send("Dev.ForceOrderResult", { result = "Delivered" })
+end)
+addButton("Dev.OrderFail", function()
+	send("Dev.ForceOrderResult", { result = "Failed" })
+end)
+addButton("Dev.SpawnEnemy", function()
+	send("Dev.SpawnEnemy", {})
+end)
+
 addButton("Dev.Victory", function()
 	send("Dev.EndMatch", { result = "Victory" })
 end)
@@ -379,6 +426,10 @@ addButton("Dev.VisualFallback", function()
 end)
 addButton("Dev.Checklist", function()
 	task.spawn(runChecklist)
+end)
+addButton("Dev.Ping", function()
+	send("Dev.Ping", {})
+	showReport(Strings.format("Dev.Ping"), { "Envoyé (sans effet côté serveur)" })
 end)
 
 -- Rapports et ligne d'état ------------------------------------------------------------------
