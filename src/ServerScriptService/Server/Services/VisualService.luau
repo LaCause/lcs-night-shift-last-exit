@@ -27,6 +27,17 @@ function VisualService.build(id: string): (Model?, boolean)
 		local source = if assets then assets:FindFirstChild(modelName) else nil
 		if source ~= nil and source:IsA("Model") then
 			return source:Clone(), false
+		elseif source ~= nil and source:IsA("BasePart") then
+			-- Le marketplace insère parfois une pièce unique (MeshPart/UnionOperation) plutôt
+			-- qu'un Model : on l'enveloppe pour rester compatible avec le reste du pipeline
+			-- (PivotTo, etc.) sans exiger un regroupement manuel dans Studio.
+			local part = source:Clone()
+			local wrapper = Instance.new("Model")
+			wrapper.Name = modelName
+			part.Parent = wrapper
+			wrapper.PrimaryPart = part
+			wrapper:PivotTo(part.CFrame)
+			return wrapper, false
 		end
 		log:warn("Modèle %s introuvable pour le visuel %s : remplaçant en primitives utilisé", modelName, id)
 	end

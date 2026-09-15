@@ -70,6 +70,7 @@ local TEXTS: { [string]: string } = {
 	["Resource.Essence"] = "Essence",
 	["Resource.SuspectSteak"] = "Steak suspect",
 	["Resource.RoadBread"] = "Pain de route",
+	["Resource.Scrap"] = "Ferraille",
 
 	-- Forêt et récolte
 	["Forest.HarvestAction"] = "Récolter",
@@ -100,6 +101,7 @@ local TEXTS: { [string]: string } = {
 	["Hud.Order.None"] = "Aucune commande en cours",
 	["Hud.Order.Active"] = "{recipe} · {status}",
 	["Hud.Order.Status.Pending"] = "en attente",
+	["Hud.Order.Status.Preparing"] = "en cuisson",
 	["Hud.Order.Status.Prepared"] = "prête à livrer",
 	["Hud.Order.Status.Delivered"] = "livrée",
 	["Hud.Order.Status.Failed"] = "manquée",
@@ -115,6 +117,19 @@ local TEXTS: { [string]: string } = {
 	["Dev.OrderFail"] = "Commande échouée",
 	["Dev.SpawnEnemy"] = "Invoquer l'ennemi",
 	["Dev.ShowGameplayState"] = "État du gameplay",
+
+	-- 003-bus-evasion : bus, réparation et départ.
+	["Bus.RepairAction"] = "Déposer",
+	["Bus.RepairObject"] = "Bus à réparer",
+	["Bus.DepartAction"] = "Partir",
+	["Bus.DepartObject"] = "Bus réparé",
+	["Notify.ScrapDeposited"] = "Ferraille déposée : {amount}.",
+	["Notify.BusRepaired"] = "Le bus est réparé. La sortie est possible.",
+	["Hud.Bus.Progress"] = "Bus : {deposited} / {required} ferraille",
+	["Hud.Bus.Repaired"] = "Bus réparé — en route !",
+
+	-- Panneau de développement, ajouts 003-bus-evasion
+	["Dev.RepairBus"] = "Réparer le bus",
 }
 
 local warned: { [string]: boolean } = {}

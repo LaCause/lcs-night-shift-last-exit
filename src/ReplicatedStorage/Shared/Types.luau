@@ -8,10 +8,13 @@ export type MatchResult = "Victory" | "Defeat"
 export type PlayerStatus = "Alive" | "Eliminated"
 
 -- Ressources récoltables en forêt (002-premier-increment-jouable, data-model.md).
-export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread"
+-- "Scrap" ajouté par 003-bus-evasion (data-model.md) : sert uniquement à réparer le bus.
+export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread" | "Scrap"
 
 -- État de la commande de la nuit (data-model.md, « Commande »).
-export type OrderStatus = "" | "Pending" | "Prepared" | "Delivered" | "Failed"
+-- "Preparing" ajouté : la préparation dure désormais Kitchen.PrepareDuration secondes au lieu
+-- d'être instantanée (retour visuel/sonore pendant la cuisson).
+export type OrderStatus = "" | "Pending" | "Preparing" | "Prepared" | "Delivered" | "Failed"
 
 export type RejectCode = "BadEnvelope"
 	| "UnknownAction"
@@ -30,6 +33,9 @@ export type RejectCode = "BadEnvelope"
 	| "MissingIngredients"
 	| "NotPrepared"
 	| "OrderClosed"
+	-- Ajoutés par 003-bus-evasion (contracts/network.md).
+	| "BusNotRepaired"
+	| "TeamNotReady"
 
 export type RefPointId = "Spawn"
 	| "DriveThruWindow"

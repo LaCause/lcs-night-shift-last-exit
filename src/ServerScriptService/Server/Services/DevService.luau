@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage.Shared
 local Log = require(Shared.Util.Log)
 local Types = require(Shared.Types)
+local BusService = require(script.Parent.BusService)
 local EnemyService = require(script.Parent.EnemyService)
 local GeneratorService = require(script.Parent.GeneratorService)
 local HealthService = require(script.Parent.HealthService)
@@ -152,6 +153,14 @@ function DevService.Init()
 		return nil
 	end)
 
+	-- 003-bus-evasion : force la réparation complète du bus, pour tester le départ sans dépendre
+	-- d'une récolte réelle (FR-012).
+	DevService.command("RepairBus", function(player)
+		BusService.forceRepair()
+		DevService.report(player, "Bus", { "Réparation forcée" })
+		return nil
+	end)
+
 	-- 002-premier-increment-jouable : commandes de test du gameplay.
 	DevService.command("GiveResources", function(player, payload)
 		local added = InventoryService.addPersonal(player, payload.resource, payload.amount)
@@ -163,7 +172,7 @@ function DevService.Init()
 
 	DevService.command("ShowGameplayState", function(player)
 		local lines = {}
-		for _, resourceType in { "Essence", "SuspectSteak", "RoadBread" } do
+		for _, resourceType in { "Essence", "SuspectSteak", "RoadBread", "Scrap" } do
 			table.insert(lines, `{resourceType} porté : {player:GetAttribute(`Inv_{resourceType}`) or 0}`)
 		end
 		local stock = ReplicatedStorage:FindFirstChild("Stock")
@@ -183,6 +192,11 @@ function DevService.Init()
 		local recipeId, status = OrderService.getStatus()
 		table.insert(lines, `Commande — {if recipeId == "" then "aucune" else recipeId} : {if status == "" then "—" else status}`)
 		table.insert(lines, `Santé : {HealthService.get(player) or 0}/{player:GetAttribute("MaxHealth") or 0}`)
+		local busDeposited, busRequired = BusService.getProgress()
+		table.insert(
+			lines,
+			`Bus — {busDeposited}/{busRequired} ferraille, réparé : {yesNo(BusService.isRepaired())}`
+		)
 		DevService.report(player, "État du gameplay", lines)
 		return nil
 	end)

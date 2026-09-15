@@ -61,6 +61,18 @@ local intents: { [string]: IntentDecl } = {
 		target = { field = "target", rangeSetting = "Kitchen.DeliverRange" },
 	},
 
+	-- 003-bus-evasion (contracts/network.md).
+	RepairBus = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Bus.InteractRange" },
+	},
+	DepartBus = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = { "Escape" },
+		target = { field = "target", rangeSetting = "Bus.DepartureRange" },
+	},
+
 	["Dev.Ping"] = { schema = EMPTY, devOnly = true },
 	["Dev.NextPhase"] = { schema = EMPTY, phases = NOT_WAITING, devOnly = true },
 	["Dev.SetTestProfile"] = {
@@ -97,7 +109,8 @@ local intents: { [string]: IntentDecl } = {
 	-- 002-premier-increment-jouable (contracts/server-api.md, commandes de dev ajoutées).
 	["Dev.GiveResources"] = {
 		schema = Validate.object({
-			resource = Validate.enum({ "Essence", "SuspectSteak", "RoadBread" }),
+			-- "Scrap" ajouté par 003-bus-evasion (contracts/network.md).
+			resource = Validate.enum({ "Essence", "SuspectSteak", "RoadBread", "Scrap" }),
 			amount = Validate.integer(1, 50),
 		}),
 		devOnly = true,
@@ -108,6 +121,9 @@ local intents: { [string]: IntentDecl } = {
 		devOnly = true,
 	},
 	["Dev.SpawnEnemy"] = { schema = EMPTY, devOnly = true },
+
+	-- 003-bus-evasion (contracts/network.md, commande de dev ajoutée).
+	["Dev.RepairBus"] = { schema = EMPTY, devOnly = true },
 }
 
 local Remotes = {
@@ -136,7 +152,13 @@ local Remotes = {
 		"ResourceHarvested",
 		"ResourceDeposited",
 		"GeneratorFueled",
+		"OrderPreparing",
 		"OrderPrepared",
+		-- 003-bus-evasion (contracts/network.md) : ScrapDeposited suit le même patron que
+		-- GeneratorFueled (send, retour personnel) ; BusRepaired celui de GeneratorRefueled
+		-- (broadcast, uniquement à la transition).
+		"ScrapDeposited",
+		"BusRepaired",
 	}),
 }
 

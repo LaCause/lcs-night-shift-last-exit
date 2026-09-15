@@ -40,16 +40,21 @@ local function getNumber(instance: Instance, key: string): number
 	return if typeof(value) == "number" then value else 0
 end
 
+-- Toutes les ressources personnelles (indépendant de STOCK_TYPES, qui exclut Essence/Scrap).
+local ALL_RESOURCE_TYPES: { ResourceType } = { "Essence", "SuspectSteak", "RoadBread", "Scrap" }
+
 local function initPlayer(player: Player)
-	player:SetAttribute(attributeKey("Essence"), 0)
-	player:SetAttribute(attributeKey("SuspectSteak"), 0)
-	player:SetAttribute(attributeKey("RoadBread"), 0)
+	for _, resourceType in ALL_RESOURCE_TYPES do
+		player:SetAttribute(attributeKey(resourceType), 0)
+	end
 end
 
 local function personalTotal(player: Player): number
-	return getNumber(player, attributeKey("Essence"))
-		+ getNumber(player, attributeKey("SuspectSteak"))
-		+ getNumber(player, attributeKey("RoadBread"))
+	local total = 0
+	for _, resourceType in ALL_RESOURCE_TYPES do
+		total += getNumber(player, attributeKey(resourceType))
+	end
+	return total
 end
 
 local function stockFolder(): Folder
@@ -90,11 +95,12 @@ function InventoryService.depositToStock(player: Player): number
 	return total
 end
 
--- Prélève l'essence portée par le joueur (au plus `maxAmount`, ou tout si omis) et renvoie la
--- quantité réellement prélevée ; le reste demeure dans l'inventaire (FR-007). Consommée par
--- GeneratorService avant d'appeler GeneratorService.deposit.
-function InventoryService.depositEssence(player: Player, maxAmount: number?): number
-	local key = attributeKey("Essence")
+-- Prélève une ressource portée par le joueur (au plus `maxAmount`, ou tout si omis) et renvoie
+-- la quantité réellement prélevée ; le reste demeure dans l'inventaire (FR-007). Généralisée par
+-- 003-bus-evasion (research R4) pour servir à la fois GeneratorService (Essence) et BusService
+-- (Scrap), sans dupliquer la logique de prélèvement.
+function InventoryService.depositResource(player: Player, resourceType: ResourceType, maxAmount: number?): number
+	local key = attributeKey(resourceType)
 	local carried = getNumber(player, key)
 	local amount = if maxAmount ~= nil then math.min(carried, maxAmount) else carried
 	if amount > 0 then

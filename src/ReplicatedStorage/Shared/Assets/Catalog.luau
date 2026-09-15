@@ -326,6 +326,12 @@ local function buildBus(): Model
 	block(model, "RustPatch", Vector3.new(8.25, 1.2, 2.5), CFrame.new(0, 2.2, 6), COLORS.BusStripe, {
 		material = Enum.Material.CorrodedMetal,
 	})
+	-- 003-bus-evasion : voyant de réparation, rouge tant que le bus n'est pas réparé, vert une
+	-- fois réparé (BusService bascule sa couleur, comme GeneratorLight pour le générateur).
+	block(model, "RepairLight", Vector3.new(0.3, 0.3, 0.3), CFrame.new(0, 5.6, -11.05), COLORS.Warning, {
+		material = Enum.Material.Neon,
+		collide = false,
+	})
 	return finish(model)
 end
 
@@ -433,6 +439,38 @@ local function buildDeliverCue(): Model
 	return finish(model)
 end
 
+-- 003-bus-evasion : tas de ferraille récoltable en forêt, même principe que les trois nœuds de
+-- ressource existants (PrimaryPart pour le ProximityPrompt et la bascule de disponibilité).
+local function buildScrapPile(): Model
+	local model = newModel("ScrapPile")
+	local body = block(model, "Body", Vector3.new(1.8, 1, 1.6), CFrame.new(0, 0.5, 0), COLORS.DarkSteel, {
+		material = Enum.Material.Metal,
+	})
+	block(
+		model,
+		"Plate",
+		Vector3.new(1.2, 0.15, 0.9),
+		CFrame.new(0.1, 1.05, 0.1) * CFrame.Angles(0, math.rad(20), 0),
+		COLORS.Steel,
+		{
+			material = Enum.Material.Metal,
+		}
+	)
+	block(
+		model,
+		"Rod",
+		Vector3.new(0.15, 0.15, 1.4),
+		CFrame.new(-0.3, 1.15, -0.2) * CFrame.Angles(math.rad(70), 0, 0),
+		COLORS.Steel,
+		{
+			shape = Enum.PartType.Cylinder,
+			material = Enum.Material.Metal,
+		}
+	)
+	model.PrimaryPart = body
+	return finish(model)
+end
+
 local function buildFallbackProbe(): Model
 	local model = newModel("FallbackProbe")
 	block(model, "Probe", Vector3.new(2, 2, 2), CFrame.new(0, 1, 0), COLORS.NeonPink, { material = Enum.Material.Neon })
@@ -449,10 +487,12 @@ local Catalog: { [string]: Entry } = {
 	SuspectCooler = { BuildFallback = buildSuspectCooler },
 	RoadVendingMachine = { BuildFallback = buildRoadVendingMachine },
 	Enemy = { BuildFallback = buildEnemy },
+	-- 003-bus-evasion : nœud de ferraille, en primitive (original).
+	ScrapPile = { BuildFallback = buildScrapPile },
 	-- 002-premier-increment-jouable : repères visuels, marketplace + repli en primitives.
-	DepositCue = { ModelName = "DepositCueModel", BuildFallback = buildDepositCue },
+	DepositCue = { ModelName = "DepositCue", BuildFallback = buildDepositCue },
 	PrepareCue = { ModelName = "PrepareCueModel", BuildFallback = buildPrepareCue },
-	DeliverCue = { ModelName = "DeliverCueModel", BuildFallback = buildDeliverCue },
+	DeliverCue = { ModelName = "DeliverCue", BuildFallback = buildDeliverCue },
 	-- Entrée de test (Dev.TestVisualFallback) : son modèle est volontairement absent.
 	FallbackProbe = { ModelName = "__FallbackProbeMissing", BuildFallback = buildFallbackProbe, TestOnly = true },
 }

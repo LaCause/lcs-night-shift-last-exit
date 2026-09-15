@@ -1,10 +1,12 @@
 --!strict
--- Repères visuels du marketplace (002-premier-increment-jouable) : sac au comptoir quand le stock
--- vient d'augmenter, poêle au plan de travail tant qu'une commande attend d'être préparée, sac à
--- emporter à la fenêtre tant qu'elle attend d'être livrée. Purement décoratif : aucune autorité de
--- jeu, seulement un reflet de l'état déjà répliqué (ReplicatedStorage.Stock, .OrderState),
+-- Repères visuels du marketplace : sac au comptoir dès qu'un dépôt d'ingrédient a eu lieu pour
+-- la commande en cours, poêle au plan de travail pendant la cuisson, sac à emporter à la fenêtre
+-- une fois prête à livrer. Les trois s'accumulent (aucun ne se masque en cours de route) et se
+-- masquent tous ensemble à la livraison (ou à l'échec/la remise à zéro de la commande) : la
+-- progression complète reste visible jusqu'à la conclusion. Purement décoratif : aucune autorité
+-- de jeu, seulement un reflet de l'état déjà répliqué (ReplicatedStorage.Stock, .OrderState),
 -- construit et affiché/masqué depuis le serveur (principe III) donc identique pour tous les
--- joueurs. Voir Catalog.luau (DepositCue/PrepareCue/DeliverCue) et AssetImportService.
+-- joueurs. Voir Catalog.luau (DepositCue/PrepareCue/DeliverCue).
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -19,9 +21,6 @@ type ResourceType = Types.ResourceType
 local COUNTER_ID = "Counter"
 local WORKTOP_ID = "Worktop"
 local WINDOW_ID = "DriveThruWindow"
--- Le dépôt est un geste ponctuel (contrairement au statut de commande, un état) : le sac
--- apparaît puis s'efface, comme le flash/son de SfxController/FeedbackFxController côté client.
-local DEPOSIT_POP_DURATION = 1.6
 local STOCK_TYPES: { ResourceType } = { "SuspectSteak", "RoadBread" }
 
 local log = Log.new("FeedbackVisual")
@@ -77,15 +76,15 @@ function FeedbackVisualService.Init()
 	setVisible(prepareCue, false)
 	setVisible(deliverCue, false)
 
-	-- Sac au comptoir : un pic à chaque dépôt (hausse du stock partagé), pas à sa consommation
-	-- par une préparation ni à sa remise à zéro en début de partie.
+	-- Sac au comptoir : apparaît dès qu'un dépôt a lieu pendant qu'une commande est en attente
+	-- (Pending), et reste visible (aucun pic temporisé) jusqu'à la conclusion de la commande.
 	local stock = ReplicatedStorage:WaitForChild("Stock")
+	local orderState = ReplicatedStorage:WaitForChild("OrderState")
 	local previousStock: { [string]: number } = {}
 	for _, resourceType in STOCK_TYPES do
 		local value = stock:GetAttribute(resourceType)
 		previousStock[resourceType] = if typeof(value) == "number" then value else 0
 	end
-	local popToken = 0
 	local function onStockChanged(resourceType: string)
 		local value = stock:GetAttribute(resourceType)
 		if typeof(value) ~= "number" then
@@ -96,14 +95,9 @@ function FeedbackVisualService.Init()
 		if value <= previous then
 			return
 		end
-		popToken += 1
-		local token = popToken
-		setVisible(depositCue, true)
-		task.delay(DEPOSIT_POP_DURATION, function()
-			if popToken == token then
-				setVisible(depositCue, false)
-			end
-		end)
+		if orderState:GetAttribute("Status") == "Pending" then
+			setVisible(depositCue, true)
+		end
 	end
 	for _, resourceType in STOCK_TYPES do
 		stock:GetAttributeChangedSignal(resourceType):Connect(function()
@@ -111,13 +105,21 @@ function FeedbackVisualService.Init()
 		end)
 	end
 
-	-- Poêle au plan de travail tant que la commande attend d'être préparée, sac à la fenêtre
-	-- tant qu'elle attend d'être livrée.
-	local orderState = ReplicatedStorage:WaitForChild("OrderState")
+	-- Poêle au plan de travail pendant la cuisson (Preparing), sac à la fenêtre une fois prête
+	-- (Prepared) : les trois repères s'accumulent puis se masquent tous ensemble à la conclusion
+	-- de la commande (Delivered/Failed/remise à zéro).
 	local function onOrderStatusChanged()
 		local status = orderState:GetAttribute("Status")
-		setVisible(prepareCue, status == "Pending")
-		setVisible(deliverCue, status == "Prepared")
+		if status == "Preparing" then
+			setVisible(prepareCue, true)
+		elseif status == "Prepared" then
+			setVisible(deliverCue, true)
+		elseif status ~= "Pending" then
+			-- "", "Delivered" ou "Failed" : commande conclue ou remise à zéro.
+			setVisible(depositCue, false)
+			setVisible(prepareCue, false)
+			setVisible(deliverCue, false)
+		end
 	end
 	orderState:GetAttributeChangedSignal("Status"):Connect(onOrderStatusChanged)
 	onOrderStatusChanged()

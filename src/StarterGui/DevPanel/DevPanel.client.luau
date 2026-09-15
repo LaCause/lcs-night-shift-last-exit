@@ -42,7 +42,7 @@ local PANEL_WIDTH = 270
 -- s'arrête juste au-dessus (8 px de marge en haut, 8 px d'écart avec le fil).
 local EXPANDED_SIZE = UDim2.new(0, PANEL_WIDTH, 0.7, -28)
 local COLLAPSED_SIZE = UDim2.fromOffset(PANEL_WIDTH, 44)
-local RESOURCE_TYPES = { "Essence", "SuspectSteak", "RoadBread" }
+local RESOURCE_TYPES = { "Essence", "SuspectSteak", "RoadBread", "Scrap" }
 -- Doit correspondre au titre du rapport Dev.GetRejections (DevService.luau).
 local REJECTIONS_TITLE = "Refus récents"
 local BURST_SIZE = 30
@@ -400,6 +400,10 @@ addButton("Dev.OrderFail", function()
 end)
 addButton("Dev.SpawnEnemy", function()
 	send("Dev.SpawnEnemy", {})
+end)
+-- 003-bus-evasion : force la réparation complète du bus, pour tester le départ.
+addButton("Dev.RepairBus", function()
+	send("Dev.RepairBus", {})
 end)
 
 addButton("Dev.Victory", function()

@@ -21,6 +21,7 @@ local WorldService = { Name = "WorldService", Priority = 20 }
 
 local ready = false
 local restaurantSpawn: SpawnLocation? = nil
+local worldFolder: Folder? = nil
 
 -- Un SpawnLocation hérité d'un gabarit Studio ferait apparaître les joueurs ailleurs.
 local function disableForeignSpawns()
@@ -100,6 +101,7 @@ function WorldService.Init()
 	end
 
 	world.Parent = workspace
+	worldFolder = world
 
 	for _, id in RefPoints.Ids do
 		if refFolder:FindFirstChild(id) == nil then
@@ -115,6 +117,22 @@ end
 
 function WorldService.refPoint(id: string): BasePart?
 	return RefPoints.find(id)
+end
+
+-- Retrouve un modèle déjà construit depuis Layout.Visuals par son nom (ex. "Bus"), sous
+-- Workspace.World (003-bus-evasion, même esprit que refPoint, pour un visuel plutôt qu'un point
+-- de référence). Le modèle est construit une seule fois au démarrage du serveur (Init), jamais
+-- reconstruit par partie, contrairement à la forêt.
+function WorldService.visual(name: string): Model?
+	local folder = worldFolder
+	if folder == nil then
+		return nil
+	end
+	local found = folder:FindFirstChild(name)
+	if found ~= nil and found:IsA("Model") then
+		return found
+	end
+	return nil
 end
 
 function WorldService.spawnLocation(): SpawnLocation?

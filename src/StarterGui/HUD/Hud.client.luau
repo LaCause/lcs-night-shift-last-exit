@@ -33,6 +33,7 @@ local FEED_KINDS = {
 	"BellRang",
 	"MatchEnded",
 	"OrderPrepared",
+	"BusRepaired",
 }
 local PHASE_COLORS: { [string]: Color3 } = {
 	Waiting = Colors.Muted,
@@ -271,16 +272,20 @@ local function refreshGameplay()
 	breadRow.Text = `{Strings.format("Resource.RoadBread")} : {state.roadBread}`
 	punchOnChange("RoadBread", breadRow, state.roadBread, Colors.Text)
 
-	local fuelRow = gameplayRow("Fuel", 5)
+	local scrapRow = gameplayRow("Scrap", 5)
+	scrapRow.Text = `{Strings.format("Resource.Scrap")} : {state.scrap}`
+	punchOnChange("Scrap", scrapRow, state.scrap, Colors.Text)
+
+	local fuelRow = gameplayRow("Fuel", 6)
 	fuelRow.Text = `{Strings.format("Hud.Fuel")} : {math.floor(state.fuel)}/{math.floor(state.fuelCapacity)}`
 	local fuelColor = if state.safeZoneActive then Colors.Good else Colors.Bad
 	fuelRow.TextColor3 = fuelColor
 	punchOnRise("Fuel", fuelRow, state.fuel, fuelColor)
 
-	gameplayRow("SafeZone", 6).Text =
+	gameplayRow("SafeZone", 7).Text =
 		Strings.format(if state.safeZoneActive then "Hud.SafeZone.Active" else "Hud.SafeZone.Inactive")
 
-	local orderRow = gameplayRow("Order", 7)
+	local orderRow = gameplayRow("Order", 8)
 	if state.orderStatus == "" then
 		orderRow.Text = Strings.format("Hud.Order.None")
 	else
@@ -292,7 +297,7 @@ local function refreshGameplay()
 		})
 	end
 
-	local ingredientsRow = gameplayRow("OrderIngredients", 8)
+	local ingredientsRow = gameplayRow("OrderIngredients", 9)
 	local recipe = if state.orderStatus == "" then nil else GameplayStateClient.getOrderRecipe()
 	if recipe == nil then
 		ingredientsRow.Text = ""
@@ -305,6 +310,21 @@ local function refreshGameplay()
 	end
 	-- Une ligne vide garderait sa hauteur dans la liste : on la masque.
 	ingredientsRow.Visible = ingredientsRow.Text ~= ""
+
+	-- Bus (003-bus-evasion, FR-006) : visible dès le premier dépôt ou dès l'Évasion en cours.
+	local busRow = gameplayRow("Bus", 10)
+	local matchPhase = MatchStateClient.get().phase
+	local showBus = state.busDeposited > 0 or state.busRequired > 0 and matchPhase == "Escape"
+	if state.busRepaired then
+		busRow.Text = Strings.format("Hud.Bus.Repaired")
+		busRow.TextColor3 = Colors.Good
+	else
+		busRow.Text =
+			Strings.format("Hud.Bus.Progress", { deposited = state.busDeposited, required = state.busRequired })
+		busRow.TextColor3 = Colors.Text
+	end
+	punchOnChange("BusDeposited", busRow, state.busDeposited, if state.busRepaired then Colors.Good else Colors.Text)
+	busRow.Visible = showBus or state.busRepaired
 end
 
 -- Fil de notifications (en bas à gauche) ---------------------------------------------------

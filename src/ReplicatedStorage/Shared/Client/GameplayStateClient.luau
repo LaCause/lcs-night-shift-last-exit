@@ -15,6 +15,7 @@ export type State = {
 	essence: number,
 	suspectSteak: number,
 	roadBread: number,
+	scrap: number,
 	-- Stock partagé du restaurant (InventoryService, ReplicatedStorage.Stock).
 	stockSuspectSteak: number,
 	stockRoadBread: number,
@@ -28,6 +29,10 @@ export type State = {
 	-- Santé (HealthService, attributs sur Player).
 	health: number,
 	maxHealth: number,
+	-- Bus (BusService, ReplicatedStorage.BusState, 003-bus-evasion).
+	busDeposited: number,
+	busRequired: number,
+	busRepaired: boolean,
 }
 
 local WAIT_TIMEOUT = 30
@@ -38,6 +43,7 @@ local player = Players.LocalPlayer
 local stockFolder: Instance? = nil
 local generatorFolder: Instance? = nil
 local orderFolder: Instance? = nil
+local busFolder: Instance? = nil
 
 local recipeById: { [string]: Recipes.Recipe } = {}
 for _, recipe in Recipes do
@@ -64,6 +70,7 @@ function GameplayStateClient.get(): State
 		essence = readAttr(player, "Inv_Essence", 0),
 		suspectSteak = readAttr(player, "Inv_SuspectSteak", 0),
 		roadBread = readAttr(player, "Inv_RoadBread", 0),
+		scrap = readAttr(player, "Inv_Scrap", 0),
 		stockSuspectSteak = readAttr(stockFolder, "SuspectSteak", 0),
 		stockRoadBread = readAttr(stockFolder, "RoadBread", 0),
 		fuel = readAttr(generatorFolder, "Fuel", 0),
@@ -73,6 +80,9 @@ function GameplayStateClient.get(): State
 		orderStatus = readAttr(orderFolder, "Status", ""),
 		health = readAttr(player, "Health", 0),
 		maxHealth = readAttr(player, "MaxHealth", 0),
+		busDeposited = readAttr(busFolder, "Deposited", 0),
+		busRequired = readAttr(busFolder, "Required", 0),
+		busRepaired = readAttr(busFolder, "Repaired", false),
 	}
 end
 
@@ -118,6 +128,16 @@ task.spawn(function()
 	else
 		orderFolder = orderState
 		orderState.AttributeChanged:Connect(function()
+			GameplayStateClient.Changed:Fire()
+		end)
+	end
+
+	local busState = ReplicatedStorage:WaitForChild("BusState", WAIT_TIMEOUT)
+	if busState == nil then
+		log:error("ReplicatedStorage.BusState introuvable après %d s", WAIT_TIMEOUT)
+	else
+		busFolder = busState
+		busState.AttributeChanged:Connect(function()
 			GameplayStateClient.Changed:Fire()
 		end)
 	end

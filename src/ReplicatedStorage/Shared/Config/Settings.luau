@@ -20,7 +20,8 @@ return {
 		CountdownDuration = { value = 15, default = 15, min = 3, max = 120, test = 5 },
 		-- Durée de l'écran de fin avant la nouvelle partie, en secondes.
 		EndScreenDuration = { value = 15, default = 15, min = 3, max = 120, test = 5 },
-		-- Durée de l'évasion, en secondes ; 0 = sans limite (définie plus tard par le bus).
+		-- Durée de l'évasion, en secondes ; 0 = sans limite (le départ du bus déclenche la
+		-- victoire directement, indépendamment de toute minuterie de phase, 003-bus-evasion).
 		EscapeDuration = { value = 0, default = 0, min = 0, max = 3600 },
 		-- Seed forcée pour rejouer une partie ; 0 = seed aléatoire à chaque partie.
 		ForcedSeed = { value = 0, default = 0, min = 0, max = 2147483647, kind = "integer" },
@@ -84,6 +85,8 @@ return {
 		NodeCountEssence = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
 		NodeCountSuspectSteak = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
 		NodeCountRoadBread = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
+		-- 003-bus-evasion : nœuds de ferraille.
+		NodeCountScrap = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
 		-- Distance au centre du restaurant, en studs.
 		AreaMinRadius = { value = 40, default = 40, min = 20, max = 100 },
 		AreaMaxRadius = { value = 150, default = 150, min = 60, max = 400 },
@@ -117,6 +120,8 @@ return {
 		PrepareRange = { value = 8, default = 8, min = 4, max = 20 },
 		-- Portée pour livrer à la fenêtre du drive-thru, en studs.
 		DeliverRange = { value = 8, default = 8, min = 4, max = 20 },
+		-- Durée de la cuisson au plan de travail, en secondes (statut "Preparing").
+		PrepareDuration = { value = 5, default = 5, min = 1, max = 60, test = 2 },
 	},
 
 	-- 002-premier-increment-jouable : ennemi apparu après une commande en échec.
@@ -135,6 +140,18 @@ return {
 		GiveUpDelay = { value = 12, default = 12, min = 1, max = 120, test = 5 },
 		-- Durée de vie maximale avant disparition, en secondes.
 		MaxLifetime = { value = 90, default = 90, min = 5, max = 600, test = 20 },
+	},
+
+	-- 003-bus-evasion : réparation du bus et départ.
+	Bus = {
+		-- Ferraille requise par joueur présent au début de l'Évasion, pour une réparation
+		-- complète (Required = ScrapPerPlayer × effectif, figé à l'entrée en Évasion).
+		ScrapPerPlayer = { value = 6, default = 6, min = 1, max = 50, kind = "integer" },
+		-- Portée pour déposer de la ferraille au bus, en studs.
+		InteractRange = { value = 8, default = 8, min = 4, max = 20 },
+		-- Portée à laquelle chaque joueur en vie doit se trouver pour que le départ soit
+		-- possible, en studs (plus large que InteractRange : le bus mesure 22 studs de long).
+		DepartureRange = { value = 15, default = 15, min = 5, max = 40 },
 	},
 
 	-- 002-premier-increment-jouable : transition d'éclairage et de brouillard entre phases.

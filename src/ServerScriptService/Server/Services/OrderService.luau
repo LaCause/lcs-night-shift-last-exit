@@ -42,6 +42,10 @@ local OrderService = {
 local state: Folder? = nil
 local currentRecipeId = ""
 local currentStatus: OrderStatus = ""
+-- Incrémenté à chaque nouvelle commande/remise à zéro : garde le minuteur de cuisson (task.delay)
+-- d'une commande périmée de ne jamais affecter la commande suivante (même esprit que le jeton de
+-- MatchService pour ses délais de phase).
+local orderToken = 0
 
 local function stateFolder(): Folder
 	local folder = state
@@ -58,6 +62,7 @@ local function publish()
 end
 
 local function startNewOrder()
+	orderToken += 1
 	local recipe = Recipes[MatchService.rng("order"):NextInteger(1, #Recipes)]
 	currentRecipeId = recipe.Id
 	currentStatus = "Pending"
@@ -67,6 +72,7 @@ local function startNewOrder()
 end
 
 local function clearOrder()
+	orderToken += 1
 	currentRecipeId = ""
 	currentStatus = ""
 	publish()
@@ -161,6 +167,9 @@ function OrderService.Init()
 			if payload.target ~= WORKTOP_ID then
 				return "TargetMissing"
 			end
+			if currentStatus == "Preparing" or currentStatus == "Prepared" then
+				return nil -- déjà en cuisson ou déjà prête : rien à faire (comme un générateur plein)
+			end
 			if currentStatus ~= "Pending" then
 				return "OrderClosed"
 			end
@@ -172,9 +181,19 @@ function OrderService.Init()
 				return "MissingIngredients"
 			end
 			InventoryService.consumeStock(recipe.Ingredients)
-			currentStatus = "Prepared"
+			currentStatus = "Preparing"
 			publish()
-			NotifyService.broadcast("OrderPrepared", { recipe = Strings.format(recipe.NameKey) })
+			local recipeName = Strings.format(recipe.NameKey)
+			NotifyService.broadcast("OrderPreparing", { recipe = recipeName })
+			local token = orderToken
+			local duration: number = Config.get("Kitchen", "PrepareDuration", MatchService.isTestProfile())
+			task.delay(duration, function()
+				if orderToken == token and currentStatus == "Preparing" then
+					currentStatus = "Prepared"
+					publish()
+					NotifyService.broadcast("OrderPrepared", { recipe = recipeName })
+				end
+			end)
 			return nil
 		end,
 	})
@@ -187,7 +206,7 @@ function OrderService.Init()
 			if currentStatus == "" or currentStatus == "Delivered" or currentStatus == "Failed" then
 				return "OrderClosed"
 			end
-			if currentStatus == "Pending" then
+			if currentStatus == "Pending" or currentStatus == "Preparing" then
 				return "NotPrepared"
 			end
 			currentStatus = "Delivered"

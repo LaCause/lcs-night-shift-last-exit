@@ -26,18 +26,22 @@ type NodeState = {
 }
 
 -- Ordre fixe : garantit des tirages reproductibles pour une même seed (SC-009).
-local RESOURCE_TYPES: { ResourceType } = { "Essence", "SuspectSteak", "RoadBread" }
+-- "Scrap" ajouté par 003-bus-evasion (research R3) : aucun changement de logique, une entrée de
+-- plus dans ces tables de données.
+local RESOURCE_TYPES: { ResourceType } = { "Essence", "SuspectSteak", "RoadBread", "Scrap" }
 
 local VISUAL_FOR: { [ResourceType]: string } = {
 	Essence = "FuelCanister",
 	SuspectSteak = "SuspectCooler",
 	RoadBread = "RoadVendingMachine",
+	Scrap = "ScrapPile",
 }
 
 local NODE_COUNT_SETTING: { [ResourceType]: string } = {
 	Essence = "NodeCountEssence",
 	SuspectSteak = "NodeCountSuspectSteak",
 	RoadBread = "NodeCountRoadBread",
+	Scrap = "NodeCountScrap",
 }
 
 local log = Log.new("Forest")

@@ -170,7 +170,7 @@ function GeneratorService.Init()
 			if maxEssence <= 0 then
 				return nil -- déjà plein : aucune essence consommée, rien à faire
 			end
-			local used = InventoryService.depositEssence(player, maxEssence)
+			local used = InventoryService.depositResource(player, "Essence", maxEssence)
 			if used > 0 then
 				GeneratorService.deposit(used * fuelPerEssence)
 				-- Retour son/visuel léger côté client (SfxController) : distinct de
