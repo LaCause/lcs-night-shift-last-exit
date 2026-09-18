@@ -28,6 +28,10 @@ local SFX: { [string]: SfxDef } = {
 	ResourceDeposited = { id = "rbxasset://sounds/snap.mp3", volume = 0.38, pitchMin = 0.95, pitchMax = 1.05 },
 	GeneratorFueled = { id = "rbxasset://sounds/switch.wav", volume = 0.4 },
 	ScrapDeposited = { id = "rbxasset://sounds/snap.mp3", volume = 0.38, pitchMin = 0.8, pitchMax = 0.9 },
+	-- 004-sac-collecte : ramassage refusé, sac plein (retour personnel, jamais diffusé).
+	BagFull = { id = "rbxasset://sounds/uuhhh.mp3", volume = 0.4, pitchMin = 0.9, pitchMax = 0.95 },
+	-- Sac vidé au sol : volontairement sans variation de hauteur, le geste étant unique et net.
+	BagDropped = { id = "rbxasset://sounds/snap.mp3", volume = 0.45 },
 
 	-- Retour d'équipe, occasionnel : un peu plus présent.
 	OrderStarted = { id = "rbxasset://sounds/clickfast.wav", volume = 0.5 },

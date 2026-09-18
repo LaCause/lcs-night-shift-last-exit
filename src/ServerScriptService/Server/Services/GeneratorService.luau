@@ -80,6 +80,13 @@ function GeneratorService.deposit(amount: number): number
 	return fuel - before
 end
 
+-- Place restante avant capacité maximale (005-depot-intelligent-sac, StationDepositService) :
+-- une simple lecture, pour vérifier qu'au moins une unité peut être absorbée avant de prélever
+-- quoi que ce soit dans le sac du joueur.
+function GeneratorService.fuelRoom(): number
+	return Config.get("Generator", "Capacity") - fuel
+end
+
 function GeneratorService.hasFuel(): boolean
 	return fuel > 0
 end

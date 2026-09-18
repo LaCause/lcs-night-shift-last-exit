@@ -11,6 +11,11 @@ export type PlayerStatus = "Alive" | "Eliminated"
 -- "Scrap" ajouté par 003-bus-evasion (data-model.md) : sert uniquement à réparer le bus.
 export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread" | "Scrap"
 
+-- Sacs de portage (004-sac-collecte, data-model.md). Un seul type pour l'instant : la table
+-- BAG_TYPES de BagService est conçue pour en accueillir d'autres (contenances supérieures) sans
+-- logique nouvelle, seulement une entrée de plus.
+export type BagType = "LittleBag"
+
 -- État de la commande de la nuit (data-model.md, « Commande »).
 -- "Preparing" ajouté : la préparation dure désormais Kitchen.PrepareDuration secondes au lieu
 -- d'être instantanée (retour visuel/sonore pendant la cuisson).
@@ -36,6 +41,11 @@ export type RejectCode = "BadEnvelope"
 	-- Ajoutés par 003-bus-evasion (contracts/network.md).
 	| "BusNotRepaired"
 	| "TeamNotReady"
+	-- Ajoutés par 004-sac-collecte (contracts/network.md).
+	| "AlreadyCarried"
+	| "NotCarrying"
+	| "BagNotEquipped"
+	| "BagEmpty"
 
 export type RefPointId = "Spawn"
 	| "DriveThruWindow"

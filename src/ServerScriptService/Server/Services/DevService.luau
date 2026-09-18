@@ -10,6 +10,7 @@ local RunService = game:GetService("RunService")
 local Shared = ReplicatedStorage.Shared
 local Log = require(Shared.Util.Log)
 local Types = require(Shared.Types)
+local BagService = require(script.Parent.BagService)
 local BusService = require(script.Parent.BusService)
 local EnemyService = require(script.Parent.EnemyService)
 local GeneratorService = require(script.Parent.GeneratorService)
@@ -161,6 +162,24 @@ function DevService.Init()
 		return nil
 	end)
 
+	-- 004-sac-collecte : remplir/vider le sac, pour tester la contenance et le refus « sac plein »
+	-- sans dépendre d'une récolte réelle (FR-018).
+	DevService.command("FillBag", function(player)
+		local added = BagService.fill(player)
+		DevService.report(player, "Sac", {
+			if added > 0
+				then `+{added} — sac à {BagService.usedBy(player)}/{BagService.capacityOf(player)}`
+				else "Déjà plein",
+		})
+		return nil
+	end)
+
+	DevService.command("EmptyBag", function(player)
+		BagService.empty(player)
+		DevService.report(player, "Sac", { "Sac vidé" })
+		return nil
+	end)
+
 	-- 002-premier-increment-jouable : commandes de test du gameplay.
 	DevService.command("GiveResources", function(player, payload)
 		local added = InventoryService.addPersonal(player, payload.resource, payload.amount)
@@ -175,6 +194,17 @@ function DevService.Init()
 		for _, resourceType in { "Essence", "SuspectSteak", "RoadBread", "Scrap" } do
 			table.insert(lines, `{resourceType} porté : {player:GetAttribute(`Inv_{resourceType}`) or 0}`)
 		end
+		table.insert(
+			lines,
+			`Sac — {BagService.typeOf(player)} : {BagService.usedBy(player)}/{BagService.capacityOf(player)}`
+		)
+		-- 005-depot-intelligent-sac : contrôle visuel de l'ordre d'arrivée, sans deviner l'état
+		-- interne (FR-004).
+		local order = InventoryService.orderOf(player)
+		table.insert(
+			lines,
+			`Ordre d'arrivée (plus récent en dernier) : {if #order == 0 then "vide" else table.concat(order, ", ")}`
+		)
 		local stock = ReplicatedStorage:FindFirstChild("Stock")
 		if stock then
 			table.insert(

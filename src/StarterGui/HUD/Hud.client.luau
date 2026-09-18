@@ -34,6 +34,10 @@ local FEED_KINDS = {
 	"MatchEnded",
 	"OrderPrepared",
 	"BusRepaired",
+	-- 004-sac-collecte : seul retour visible d'un ramassage refusé, le pipeline ne renvoyant
+	-- jamais ses refus au client (research R10).
+	"BagFull",
+	"BagDropped",
 }
 local PHASE_COLORS: { [string]: Color3 } = {
 	Waiting = Colors.Muted,
@@ -260,32 +264,51 @@ local function refreshGameplay()
 	end
 	previousGameplay.Health = state.health
 
-	local essenceRow = gameplayRow("Essence", 2)
+	-- 004-sac-collecte : le sac est le contenant du joueur ; les lignes de ressources qui suivent
+	-- en sont le détail. La ligne passe en couleur d'alerte quand il ne reste plus de place.
+	local bagRow = gameplayRow("Bag", 2)
+	local bagText = Strings.format("Hud.Bag", { used = state.bagUsed, capacity = state.bagCapacity })
+	-- Le sac doit être en main pour ramasser (FR-019) comme pour être vidé au sol (FR-020) : la
+	-- ligne dit donc toujours dans quel état il est, et ne rappelle la touche que quand elle sert.
+	if not state.bagEquipped then
+		bagText ..= ` · {Strings.format("Hud.Bag.NotEquipped")}`
+	elseif state.bagUsed > 0 then
+		bagText ..= ` · {Strings.format("Hud.Bag.Drop")}`
+	end
+	bagRow.Text = bagText
+	local bagColor = if not state.bagEquipped
+		then Colors.Muted
+		elseif state.bagCapacity > 0 and state.bagUsed >= state.bagCapacity then Colors.Warn
+		else Colors.Text
+	bagRow.TextColor3 = bagColor
+	punchOnChange("Bag", bagRow, state.bagUsed, bagColor)
+
+	local essenceRow = gameplayRow("Essence", 3)
 	essenceRow.Text = `{Strings.format("Resource.Essence")} : {state.essence}`
 	punchOnChange("Essence", essenceRow, state.essence, Colors.Text)
 
-	local steakRow = gameplayRow("SuspectSteak", 3)
+	local steakRow = gameplayRow("SuspectSteak", 4)
 	steakRow.Text = `{Strings.format("Resource.SuspectSteak")} : {state.suspectSteak}`
 	punchOnChange("SuspectSteak", steakRow, state.suspectSteak, Colors.Text)
 
-	local breadRow = gameplayRow("RoadBread", 4)
+	local breadRow = gameplayRow("RoadBread", 5)
 	breadRow.Text = `{Strings.format("Resource.RoadBread")} : {state.roadBread}`
 	punchOnChange("RoadBread", breadRow, state.roadBread, Colors.Text)
 
-	local scrapRow = gameplayRow("Scrap", 5)
+	local scrapRow = gameplayRow("Scrap", 6)
 	scrapRow.Text = `{Strings.format("Resource.Scrap")} : {state.scrap}`
 	punchOnChange("Scrap", scrapRow, state.scrap, Colors.Text)
 
-	local fuelRow = gameplayRow("Fuel", 6)
+	local fuelRow = gameplayRow("Fuel", 7)
 	fuelRow.Text = `{Strings.format("Hud.Fuel")} : {math.floor(state.fuel)}/{math.floor(state.fuelCapacity)}`
 	local fuelColor = if state.safeZoneActive then Colors.Good else Colors.Bad
 	fuelRow.TextColor3 = fuelColor
 	punchOnRise("Fuel", fuelRow, state.fuel, fuelColor)
 
-	gameplayRow("SafeZone", 7).Text =
+	gameplayRow("SafeZone", 8).Text =
 		Strings.format(if state.safeZoneActive then "Hud.SafeZone.Active" else "Hud.SafeZone.Inactive")
 
-	local orderRow = gameplayRow("Order", 8)
+	local orderRow = gameplayRow("Order", 9)
 	if state.orderStatus == "" then
 		orderRow.Text = Strings.format("Hud.Order.None")
 	else
@@ -297,7 +320,7 @@ local function refreshGameplay()
 		})
 	end
 
-	local ingredientsRow = gameplayRow("OrderIngredients", 9)
+	local ingredientsRow = gameplayRow("OrderIngredients", 10)
 	local recipe = if state.orderStatus == "" then nil else GameplayStateClient.getOrderRecipe()
 	if recipe == nil then
 		ingredientsRow.Text = ""
@@ -312,7 +335,7 @@ local function refreshGameplay()
 	ingredientsRow.Visible = ingredientsRow.Text ~= ""
 
 	-- Bus (003-bus-evasion, FR-006) : visible dès le premier dépôt ou dès l'Évasion en cours.
-	local busRow = gameplayRow("Bus", 10)
+	local busRow = gameplayRow("Bus", 11)
 	local matchPhase = MatchStateClient.get().phase
 	local showBus = state.busDeposited > 0 or state.busRequired > 0 and matchPhase == "Escape"
 	if state.busRepaired then

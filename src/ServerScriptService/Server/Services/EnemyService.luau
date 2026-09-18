@@ -76,7 +76,11 @@ local function spawnAtPart(spawnPart: BasePart)
 		return
 	end
 	built.Name = "Enemy"
-	built:PivotTo(spawnPart.CFrame)
+	-- placeFresh, pas PivotTo : ce modèle a un PrimaryPart (Torso), ce qui ferait reposer PivotTo
+	-- dessus plutôt que sur la base du modèle (VisualService.placeFresh). Les déplacements
+	-- ultérieurs (ci-dessous) restent en PivotTo : une fois ce premier placement fait, la
+	-- géométrie relative du modèle ne bouge plus, donc PivotTo y reste cohérent avec lui-même.
+	VisualService.placeFresh(built, spawnPart.CFrame)
 	built.Parent = enemiesFolder()
 
 	model = built

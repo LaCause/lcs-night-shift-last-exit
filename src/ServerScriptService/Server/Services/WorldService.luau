@@ -23,12 +23,21 @@ local ready = false
 local restaurantSpawn: SpawnLocation? = nil
 local worldFolder: Folder? = nil
 
--- Un SpawnLocation hérité d'un gabarit Studio ferait apparaître les joueurs ailleurs.
-local function disableForeignSpawns()
+-- Restes d'un gabarit Studio (Baseplate, SpawnLocation par défaut) : détruits entièrement, pas
+-- seulement désactivés. Un SpawnLocation.Enabled = false reste un bloc solide et visible ; un
+-- Baseplate laissé en place est exactement coplanaire avec Workspace.World.Ground.Grass (les deux
+-- ont leur surface à y = 0), ce qui scintille (Z-fighting) au lieu de simplement disparaître
+-- derrière le sol construit par script.
+local function removeForeignTemplateParts()
+	local baseplate = workspace:FindFirstChild("Baseplate")
+	if baseplate ~= nil and baseplate:IsA("BasePart") then
+		baseplate:Destroy()
+		log:warn("Baseplate de gabarit Studio supprimé")
+	end
 	for _, descendant in workspace:GetDescendants() do
-		if descendant:IsA("SpawnLocation") and descendant.Enabled then
-			descendant.Enabled = false
-			log:warn("SpawnLocation étranger désactivé : %s", descendant:GetFullName())
+		if descendant:IsA("SpawnLocation") then
+			log:warn("SpawnLocation étranger supprimé : %s", descendant:GetFullName())
+			descendant:Destroy()
 		end
 	end
 end
@@ -60,7 +69,7 @@ function WorldService.Init()
 	if previous then
 		previous:Destroy()
 	end
-	disableForeignSpawns()
+	removeForeignTemplateParts()
 
 	local world = Instance.new("Folder")
 	world.Name = "World"

@@ -387,10 +387,18 @@ addButton("Dev.ShowGameplayState", function()
 	send("Dev.ShowGameplayState", {})
 end)
 addButton("Dev.GiveResources", function()
-	-- Une unité de chaque ressource, dans la limite de Forest.InventoryCapacity.
+	-- Une unité de chaque ressource, dans la limite de la contenance du sac (Bag.SmallCapacity,
+	-- 004-sac-collecte : Forest.InventoryCapacity n'existe plus).
 	for _, resource in RESOURCE_TYPES do
 		send("Dev.GiveResources", { resource = resource, amount = 1 })
 	end
+end)
+-- 004-sac-collecte : remplir/vider le sac pour tester la contenance et le refus « sac plein ».
+addButton("Dev.FillBag", function()
+	send("Dev.FillBag", {})
+end)
+addButton("Dev.EmptyBag", function()
+	send("Dev.EmptyBag", {})
 end)
 addButton("Dev.OrderDeliver", function()
 	send("Dev.ForceOrderResult", { result = "Delivered" })

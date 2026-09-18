@@ -94,8 +94,6 @@ return {
 		HarvestRange = { value = 8, default = 8, min = 4, max = 20 },
 		-- Délai avant qu'un nœud récolté redevienne disponible, en secondes.
 		RespawnDelay = { value = 90, default = 90, min = 10, max = 600, test = 15 },
-		-- Total d'objets portés par un joueur, toutes ressources confondues.
-		InventoryCapacity = { value = 10, default = 10, min = 1, max = 50, kind = "integer" },
 	},
 
 	-- 002-premier-increment-jouable : générateur, néon et zone de sécurité.
@@ -152,6 +150,31 @@ return {
 		-- Portée à laquelle chaque joueur en vie doit se trouver pour que le départ soit
 		-- possible, en studs (plus large que InteractRange : le bus mesure 22 studs de long).
 		DepartureRange = { value = 15, default = 15, min = 5, max = 40 },
+	},
+
+	-- 004-sac-collecte : sac de portage et manipulation des objets à la souris.
+	Bag = {
+		-- Type de sac attribué à un joueur qui rejoint la partie.
+		DefaultType = { value = "LittleBag", default = "LittleBag", choices = { "LittleBag" } },
+		-- Contenance totale du sac, toutes ressources confondues. Remplace l'ancien
+		-- Forest.InventoryCapacity : la contenance est une propriété du sac, pas de la forêt.
+		SmallCapacity = { value = 5, default = 5, min = 1, max = 50, kind = "integer" },
+		-- Distance maximale entre un joueur et l'objet qu'il déplace, en studs ; au-delà, le
+		-- serveur ramène l'objet et force le relâchement.
+		CarryRange = { value = 18, default = 18, min = 5, max = 40 },
+		-- Période de la surveillance serveur d'un objet saisi, en secondes.
+		CarryCheckInterval = { value = 0.2, default = 0.2, min = 0.05, max = 2 },
+		-- Rayon du cercle sur lequel les objets lâchés du sac sont posés autour du joueur, en
+		-- studs : assez près pour les reprendre d'un pas, assez loin pour ne pas les empiler.
+		DropRadius = { value = 4, default = 4, min = 2, max = 12 },
+		-- 005-depot-intelligent-sac : durée d'appui, en secondes, au-delà de laquelle la touche de
+		-- vidage compte comme un maintien (vide tout) plutôt qu'une pression brève (un objet).
+		DropHoldThreshold = { value = 0.4, default = 0.4, min = 0.15, max = 1.5 },
+		-- Borne absolue des coordonnées acceptées dans ReleaseItem, en studs : garde-fou de
+		-- validation, pas un réglage de jeu (la vraie contrainte est CarryRange).
+		MaxCoordinate = { value = 2000, default = 2000, min = 100, max = 10000 },
+		-- Fréquence du lancer de rayon du pointeur côté client, en Hz.
+		PointerRefreshRate = { value = 15, default = 15, min = 5, max = 60, kind = "integer" },
 	},
 
 	-- 002-premier-increment-jouable : transition d'éclairage et de brouillard entre phases.

@@ -50,4 +50,23 @@ function VisualService.build(id: string): (Model?, boolean)
 	return result, true
 end
 
+-- Place un modèle tout juste construit à `cframe`, sans passer par PivotTo (bug Roblox vérifié :
+-- dès qu'un PrimaryPart est défini, PivotTo/GetPivot se calent dessus, quel que soit le WorldPivot
+-- déclaré avant — un modèle du catalogue avec PrimaryPart (nœuds de ressource, ennemi) se
+-- retrouverait alors enfoncé dans le sol de la hauteur de son PrimaryPart au lieu d'y reposer par
+-- sa base). Chaque pièce du catalogue est autorée relative à l'origine (X=0, Z=0 au centre, base
+-- à Y=0, en-tête de Catalog.luau) : les replacer comme si ce point d'origine devenait `cframe`
+-- revient à composer `cframe * pièce.CFrame` pour chacune, sans jamais consulter le pivot déclaré.
+--
+-- À réserver au placement INITIAL d'un modèle fraîchement construit (ses pièces sont encore à
+-- leur position autorée) : un modèle déjà déplacé une première fois (PivotTo ou celle-ci) n'est
+-- plus origine-relative, le réutiliser composerait incorrectement les transformations.
+function VisualService.placeFresh(model: Model, cframe: CFrame)
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.CFrame = cframe * descendant.CFrame
+		end
+	end
+end
+
 return VisualService

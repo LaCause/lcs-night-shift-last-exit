@@ -31,6 +31,13 @@ local InventoryService = { Name = "InventoryService", Priority = 45 }
 
 local stock: Folder? = nil
 
+-- Ordre d'arrivée du sac (005-depot-intelligent-sac, research R1) : le dernier élément est le
+-- plus récemment ajouté. État serveur pur, jamais répliqué — un Attribute Roblox ne peut pas
+-- porter un tableau, et aucun client n'a besoin de le connaître (le HUD n'affiche qu'un total).
+-- Seconde représentation de la même quantité que les compteurs Inv_*, jamais une source
+-- indépendante : #order[player] == somme(Inv_*) de ce joueur, à tout moment (data-model.md).
+local order: { [Player]: { ResourceType } } = {}
+
 local function attributeKey(resourceType: ResourceType): string
 	return `Inv_{resourceType}`
 end
@@ -43,10 +50,48 @@ end
 -- Toutes les ressources personnelles (indépendant de STOCK_TYPES, qui exclut Essence/Scrap).
 local ALL_RESOURCE_TYPES: { ResourceType } = { "Essence", "SuspectSteak", "RoadBread", "Scrap" }
 
+-- Ajoute `count` entrées de `resourceType` en fin d'ordre (les plus récentes).
+local function pushOrder(player: Player, resourceType: ResourceType, count: number)
+	if count <= 0 then
+		return
+	end
+	local list = order[player]
+	if list == nil then
+		list = {}
+		order[player] = list
+	end
+	for _ = 1, count do
+		table.insert(list, resourceType)
+	end
+end
+
+-- Retire jusqu'à `count` entrées de `resourceType`, les plus récentes de ce type en priorité.
+-- Deux entrées du même type sont interchangeables (aucune identité au-delà du type), donc leur
+-- ordre relatif entre elles n'a aucune importance.
+local function removeFromOrder(player: Player, resourceType: ResourceType, count: number)
+	if count <= 0 then
+		return
+	end
+	local list = order[player]
+	if list == nil then
+		return
+	end
+	local remaining = count
+	local index = #list
+	while index >= 1 and remaining > 0 do
+		if list[index] == resourceType then
+			table.remove(list, index)
+			remaining -= 1
+		end
+		index -= 1
+	end
+end
+
 local function initPlayer(player: Player)
 	for _, resourceType in ALL_RESOURCE_TYPES do
 		player:SetAttribute(attributeKey(resourceType), 0)
 	end
+	order[player] = {}
 end
 
 local function personalTotal(player: Player): number
@@ -65,15 +110,28 @@ local function stockFolder(): Folder
 	return folder
 end
 
--- Ajoute une ressource à l'inventaire personnel ; false si Forest.InventoryCapacity serait
--- dépassée (aucun ajout partiel).
+-- Contenance du sac porté (004-sac-collecte, research R1) : lue dans l'attribut BagCapacity écrit
+-- par BagService, jamais en requérant BagService — celui-ci dépend déjà de ce module, ce qui
+-- rendrait la dépendance circulaire (research R6, même procédé que NetService qui lit la phase
+-- dans MatchState). Repli sur le réglage tant que l'attribut n'est pas écrit (fenêtre d'arrivée).
+local function bagCapacity(player: Player): number
+	local value = player:GetAttribute("BagCapacity")
+	if typeof(value) == "number" then
+		return value
+	end
+	return Config.get("Bag", "SmallCapacity")
+end
+
+-- Ajoute une ressource à l'inventaire personnel ; false si la contenance du sac serait dépassée
+-- (aucun ajout partiel).
 function InventoryService.addPersonal(player: Player, resourceType: ResourceType, amount: number): boolean
-	local capacity: number = Config.get("Forest", "InventoryCapacity")
+	local capacity = bagCapacity(player)
 	if personalTotal(player) + amount > capacity then
 		return false
 	end
 	local key = attributeKey(resourceType)
 	player:SetAttribute(key, getNumber(player, key) + amount)
+	pushOrder(player, resourceType, amount)
 	return true
 end
 
@@ -89,10 +147,30 @@ function InventoryService.depositToStock(player: Player): number
 		if amount > 0 then
 			player:SetAttribute(key, 0)
 			folder:SetAttribute(resourceType, getNumber(folder, resourceType) + amount)
+			removeFromOrder(player, resourceType, amount)
 			total += amount
 		end
 	end
 	return total
+end
+
+-- Jumelle unitaire de depositToStock, pour un seul type (005-depot-intelligent-sac, research R3) :
+-- utilisée par le dépôt automatique, qui ne prélève jamais plus d'une unité à la fois. La fonction
+-- bulk ci-dessus n'est pas modifiée ; elle reste le chemin du dépôt manuel complet au comptoir.
+function InventoryService.depositResourceToStock(player: Player, resourceType: ResourceType, maxAmount: number): number
+	if table.find(STOCK_TYPES, resourceType) == nil then
+		return 0
+	end
+	local folder = stockFolder()
+	local key = attributeKey(resourceType)
+	local carried = getNumber(player, key)
+	local amount = math.min(carried, maxAmount)
+	if amount > 0 then
+		player:SetAttribute(key, carried - amount)
+		folder:SetAttribute(resourceType, getNumber(folder, resourceType) + amount)
+		removeFromOrder(player, resourceType, amount)
+	end
+	return amount
 end
 
 -- Prélève une ressource portée par le joueur (au plus `maxAmount`, ou tout si omis) et renvoie
@@ -105,8 +183,37 @@ function InventoryService.depositResource(player: Player, resourceType: Resource
 	local amount = if maxAmount ~= nil then math.min(carried, maxAmount) else carried
 	if amount > 0 then
 		player:SetAttribute(key, carried - amount)
+		removeFromOrder(player, resourceType, amount)
 	end
 	return amount
+end
+
+-- Vide entièrement ce que porte le joueur — compteurs et ordre d'arrivée en un seul appel
+-- (005-depot-intelligent-sac, research R6). Remplace toute écriture directe d'attribut Inv_* :
+-- BagService.empty (Dev.EmptyBag) l'utilise pour ne jamais laisser l'ordre diverger des
+-- compteurs répliqués ; même effet que le reset d'élimination ou d'arrivée (initPlayer), exposé
+-- ici pour cet appelant externe.
+function InventoryService.clearCarried(player: Player)
+	initPlayer(player)
+end
+
+-- Copie en lecture seule de l'ordre d'arrivée courant, le plus récent en dernier
+-- (005-depot-intelligent-sac, research R1). {} si le sac est vide ou le joueur inconnu.
+function InventoryService.orderOf(player: Player): { ResourceType }
+	local list = order[player]
+	if list == nil then
+		return {}
+	end
+	return table.clone(list)
+end
+
+-- Type du dernier objet ajouté au sac, nil si le sac est vide.
+function InventoryService.mostRecent(player: Player): ResourceType?
+	local list = order[player]
+	if list == nil or #list == 0 then
+		return nil
+	end
+	return list[#list]
 end
 
 function InventoryService.hasStock(requirements: { [string]: number }): boolean
@@ -173,6 +280,12 @@ function InventoryService.Init()
 			-- Ressources non déposées perdues à l'élimination (FR-005, edge case de la spec).
 			initPlayer(player)
 		end
+	end)
+	-- L'ordre d'arrivée n'est pas un attribut : contrairement à Inv_*, il ne se nettoie pas seul
+	-- au départ du joueur (005-depot-intelligent-sac, research R1) — sans ce nettoyage, la table
+	-- fuirait une entrée par joueur ayant quitté la partie.
+	SessionService.PlayerLeft:Connect(function(player: Player)
+		order[player] = nil
 	end)
 
 	NetService.registerIntent("DepositResources", {

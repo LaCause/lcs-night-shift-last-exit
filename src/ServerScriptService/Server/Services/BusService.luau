@@ -94,6 +94,34 @@ function BusService.getProgress(): (number, number)
 	return deposited, required
 end
 
+-- Prélève jusqu'à `maxAmount` ferraille et l'applique à la réparation (005-depot-intelligent-sac,
+-- research R7) : extraite de l'ancien corps de `RepairBus` pour que le dépôt manuel et le dépôt
+-- automatique partagent exactement le même code — même seuil, même notification, même
+-- déclenchement de `BusRepaired` — plutôt que deux copies qui pourraient diverger. Renvoie la
+-- quantité réellement déposée (0 si déjà réparé).
+function BusService.deposit(player: Player, maxAmount: number): number
+	local room = required - deposited
+	if room <= 0 then
+		return 0
+	end
+	local used = InventoryService.depositResource(player, "Scrap", math.min(maxAmount, room))
+	if used > 0 then
+		deposited += used
+		publish()
+		-- Retour son/visuel léger côté client (SfxController) : pas d'effet de jeu.
+		NotifyService.send(player, "ScrapDeposited", { amount = used })
+		log:info("%s dépose %d ferraille au bus (%d/%d)", player.Name, used, deposited, required)
+		if deposited >= required and not repaired then
+			repaired = true
+			publish()
+			setVisualRepaired(true)
+			NotifyService.broadcast("BusRepaired", {})
+			log:info("Bus réparé (%d/%d)", deposited, required)
+		end
+	end
+	return used
+end
+
 -- Force la réparation complète (Dev.RepairBus, FR-012) : fige `required` s'il ne l'était pas
 -- encore (comme l'entrée en Évasion le ferait), porte `deposited` à `required`, et bascule
 -- `repaired` si ce n'était pas déjà le cas.
@@ -154,25 +182,7 @@ function BusService.Init()
 			if payload.target ~= BUS_ID then
 				return "TargetMissing"
 			end
-			local room = required - deposited
-			if room <= 0 then
-				return nil -- déjà réparé : aucune ferraille consommée, rien à faire
-			end
-			local used = InventoryService.depositResource(player, "Scrap", room)
-			if used > 0 then
-				deposited += used
-				publish()
-				-- Retour son/visuel léger côté client (SfxController) : pas d'effet de jeu.
-				NotifyService.send(player, "ScrapDeposited", { amount = used })
-				log:info("%s dépose %d ferraille au bus (%d/%d)", player.Name, used, deposited, required)
-				if deposited >= required and not repaired then
-					repaired = true
-					publish()
-					setVisualRepaired(true)
-					NotifyService.broadcast("BusRepaired", {})
-					log:info("Bus réparé (%d/%d)", deposited, required)
-				end
-			end
+			BusService.deposit(player, math.huge)
 			return nil
 		end,
 	})

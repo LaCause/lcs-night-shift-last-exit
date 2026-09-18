@@ -130,6 +130,27 @@ local TEXTS: { [string]: string } = {
 
 	-- Panneau de développement, ajouts 003-bus-evasion
 	["Dev.RepairBus"] = "Réparer le bus",
+
+	-- 004-sac-collecte : sac de portage, visée au pointeur et déplacement d'objets.
+	["Bag.LittleBag"] = "Petit sac",
+	["Hud.Bag"] = "Sac : {used}/{capacity}",
+	["Pointer.Collect"] = "[F] Ramasser {resource}",
+	["Pointer.Carry"] = "Clic maintenu : déplacer",
+	["Pointer.BagFull"] = "Sac plein",
+	["Pointer.NeedBag"] = "Équipez votre sac pour ramasser",
+	["Notify.BagFull"] = "Sac plein ({capacity}) : videz-le au comptoir avant de ramasser.",
+	-- Ne compte plus que ce qui atterrit réellement au sol (un dépôt automatique a sa propre
+	-- confirmation) : texte agnostique du nombre, valable pour 1 comme pour tout le sac
+	-- (005-depot-intelligent-sac, research R8).
+	["Notify.BagDropped"] = "Au sol : {amount} objet(s). Ils n'attendront pas éternellement.",
+	["Hud.Bag.NotEquipped"] = "non équipé",
+	-- 005-depot-intelligent-sac : la touche distingue désormais pression brève (un objet) et
+	-- maintien (tout le sac).
+	["Hud.Bag.Drop"] = "[G] lâcher · maintenir : tout vider",
+
+	-- Panneau de développement, ajouts 004-sac-collecte
+	["Dev.FillBag"] = "Remplir le sac",
+	["Dev.EmptyBag"] = "Vider le sac",
 }
 
 local warned: { [string]: boolean } = {}

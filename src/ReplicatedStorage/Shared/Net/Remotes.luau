@@ -14,6 +14,8 @@ export type IntentDecl = {
 }
 
 local maxString: number = Config.get("Net", "MaxStringLength")
+-- Garde-fou de validation des coordonnées de ReleaseItem (004-sac-collecte, contracts/config.md).
+local maxCoordinate: number = Config.get("Bag", "MaxCoordinate")
 
 local PLAYABLE = { "Countdown", "Day", "Night", "Escape" }
 local ACTIVE = { "Day", "Night", "Escape" }
@@ -73,6 +75,39 @@ local intents: { [string]: IntentDecl } = {
 		target = { field = "target", rangeSetting = "Bus.DepartureRange" },
 	},
 
+	-- 004-sac-collecte (contracts/network.md). Ces deux intentions visent la même cible qu'un
+	-- ramassage (un nœud de forêt) : elles réutilisent le résolveur dynamique existant
+	-- (ForestService.findNode), sans aucune extension du pipeline. Un déplacement complet ne
+	-- coûte que ces deux intentions, jamais un flux par frame (research R4).
+	GrabItem = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Forest.HarvestRange" },
+	},
+	ReleaseItem = {
+		schema = Validate.object({
+			target = Validate.string(maxString),
+			x = Validate.number(-maxCoordinate, maxCoordinate),
+			y = Validate.number(-maxCoordinate, maxCoordinate),
+			z = Validate.number(-maxCoordinate, maxCoordinate),
+		}),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Bag.CarryRange" },
+	},
+	-- Vider le sac au sol : la seule intention de cette fonctionnalité qui ne vise rien. Sans
+	-- `target`, le pipeline saute ses étapes 7 à 9 — c'est donc le gestionnaire (BagService) qui
+	-- vérifie lui-même le personnage vivant, puis décide où les objets tombent.
+	DropBag = {
+		schema = EMPTY,
+		phases = PLAYABLE,
+	},
+	-- 005-depot-intelligent-sac : pendant complet de DropBag pour la pression brève — même forme
+	-- (aucune cible), ne retire que le dernier objet ramassé.
+	DropOneItem = {
+		schema = EMPTY,
+		phases = PLAYABLE,
+	},
+
 	["Dev.Ping"] = { schema = EMPTY, devOnly = true },
 	["Dev.NextPhase"] = { schema = EMPTY, phases = NOT_WAITING, devOnly = true },
 	["Dev.SetTestProfile"] = {
@@ -124,6 +159,10 @@ local intents: { [string]: IntentDecl } = {
 
 	-- 003-bus-evasion (contracts/network.md, commande de dev ajoutée).
 	["Dev.RepairBus"] = { schema = EMPTY, devOnly = true },
+
+	-- 004-sac-collecte (contracts/network.md, commandes de dev ajoutées).
+	["Dev.FillBag"] = { schema = EMPTY, devOnly = true },
+	["Dev.EmptyBag"] = { schema = EMPTY, devOnly = true },
 }
 
 local Remotes = {
@@ -159,6 +198,13 @@ local Remotes = {
 		-- (broadcast, uniquement à la transition).
 		"ScrapDeposited",
 		"BusRepaired",
+		-- 004-sac-collecte : le pipeline journalise les refus mais ne les renvoie jamais au
+		-- client. Sans cette notification, un joueur au sac plein verrait sa touche rester
+		-- sans effet, sans explication (research R10).
+		"BagFull",
+		-- Sac vidé au sol : confirme au joueur combien d'objets sont partis, le contenu du sac
+		-- tombant d'un coup à zéro sans autre trace à l'écran.
+		"BagDropped",
 	}),
 }
 
