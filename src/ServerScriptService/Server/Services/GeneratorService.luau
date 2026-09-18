@@ -80,6 +80,13 @@ function GeneratorService.deposit(amount: number): number
 	return fuel - before
 end
 
+-- Place restante avant capacité maximale (005-depot-intelligent-sac, StationDepositService) :
+-- une simple lecture, pour vérifier qu'au moins une unité peut être absorbée avant de prélever
+-- quoi que ce soit dans le sac du joueur.
+function GeneratorService.fuelRoom(): number
+	return Config.get("Generator", "Capacity") - fuel
+end
+
 function GeneratorService.hasFuel(): boolean
 	return fuel > 0
 end
@@ -170,7 +177,7 @@ function GeneratorService.Init()
 			if maxEssence <= 0 then
 				return nil -- déjà plein : aucune essence consommée, rien à faire
 			end
-			local used = InventoryService.depositEssence(player, maxEssence)
+			local used = InventoryService.depositResource(player, "Essence", maxEssence)
 			if used > 0 then
 				GeneratorService.deposit(used * fuelPerEssence)
 				-- Retour son/visuel léger côté client (SfxController) : distinct de

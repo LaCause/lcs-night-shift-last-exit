@@ -15,6 +15,7 @@ export type State = {
 	essence: number,
 	suspectSteak: number,
 	roadBread: number,
+	scrap: number,
 	-- Stock partagé du restaurant (InventoryService, ReplicatedStorage.Stock).
 	stockSuspectSteak: number,
 	stockRoadBread: number,
@@ -28,6 +29,18 @@ export type State = {
 	-- Santé (HealthService, attributs sur Player).
 	health: number,
 	maxHealth: number,
+	-- Bus (BusService, ReplicatedStorage.BusState, 003-bus-evasion).
+	busDeposited: number,
+	busRequired: number,
+	busRepaired: boolean,
+	-- Sac de portage (BagService, attributs sur Player, 004-sac-collecte). `bagUsed` est la somme
+	-- des compteurs ci-dessus : jamais une valeur stockée à part, pour qu'aucune divergence entre
+	-- le total et le détail ne soit possible.
+	bagType: string,
+	bagCapacity: number,
+	bagUsed: number,
+	-- Sac en main ou rangé : conditionne le ramassage et le vidage au sol (FR-019, FR-020).
+	bagEquipped: boolean,
 }
 
 local WAIT_TIMEOUT = 30
@@ -38,6 +51,7 @@ local player = Players.LocalPlayer
 local stockFolder: Instance? = nil
 local generatorFolder: Instance? = nil
 local orderFolder: Instance? = nil
+local busFolder: Instance? = nil
 
 local recipeById: { [string]: Recipes.Recipe } = {}
 for _, recipe in Recipes do
@@ -60,10 +74,19 @@ local function readAttr(instance: Instance?, name: string, default: any): any
 end
 
 function GameplayStateClient.get(): State
+	local essence: number = readAttr(player, "Inv_Essence", 0)
+	local suspectSteak: number = readAttr(player, "Inv_SuspectSteak", 0)
+	local roadBread: number = readAttr(player, "Inv_RoadBread", 0)
+	local scrap: number = readAttr(player, "Inv_Scrap", 0)
 	return {
-		essence = readAttr(player, "Inv_Essence", 0),
-		suspectSteak = readAttr(player, "Inv_SuspectSteak", 0),
-		roadBread = readAttr(player, "Inv_RoadBread", 0),
+		essence = essence,
+		suspectSteak = suspectSteak,
+		roadBread = roadBread,
+		scrap = scrap,
+		bagType = readAttr(player, "BagType", ""),
+		bagCapacity = readAttr(player, "BagCapacity", 0),
+		bagUsed = essence + suspectSteak + roadBread + scrap,
+		bagEquipped = readAttr(player, "BagEquipped", false),
 		stockSuspectSteak = readAttr(stockFolder, "SuspectSteak", 0),
 		stockRoadBread = readAttr(stockFolder, "RoadBread", 0),
 		fuel = readAttr(generatorFolder, "Fuel", 0),
@@ -73,6 +96,9 @@ function GameplayStateClient.get(): State
 		orderStatus = readAttr(orderFolder, "Status", ""),
 		health = readAttr(player, "Health", 0),
 		maxHealth = readAttr(player, "MaxHealth", 0),
+		busDeposited = readAttr(busFolder, "Deposited", 0),
+		busRequired = readAttr(busFolder, "Required", 0),
+		busRepaired = readAttr(busFolder, "Repaired", false),
 	}
 end
 
@@ -118,6 +144,16 @@ task.spawn(function()
 	else
 		orderFolder = orderState
 		orderState.AttributeChanged:Connect(function()
+			GameplayStateClient.Changed:Fire()
+		end)
+	end
+
+	local busState = ReplicatedStorage:WaitForChild("BusState", WAIT_TIMEOUT)
+	if busState == nil then
+		log:error("ReplicatedStorage.BusState introuvable après %d s", WAIT_TIMEOUT)
+	else
+		busFolder = busState
+		busState.AttributeChanged:Connect(function()
 			GameplayStateClient.Changed:Fire()
 		end)
 	end

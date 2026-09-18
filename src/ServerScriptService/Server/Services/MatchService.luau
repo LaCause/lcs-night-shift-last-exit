@@ -168,6 +168,11 @@ local function checkDefeat()
 	end
 end
 
+-- Note (003-bus-evasion, research R6) : aucune branche "Escape" ici — le départ n'est plus
+-- piloté par l'horloge de phase. BusService appelle endMatch("Victory", ...) directement quand
+-- l'équipe part avec le bus réparé ; sans limite de temps (Match.EscapeDuration = 0), advance()
+-- n'est de toute façon jamais appelée automatiquement depuis cette phase (enterPhase ne planifie
+-- de délai que si duration > 0).
 advance = function()
 	local phase = state.phase
 	if phase == "Countdown" then
@@ -181,9 +186,6 @@ advance = function()
 		else
 			enterPhase("Escape", state.totalNights)
 		end
-	elseif phase == "Escape" then
-		-- Provisoire : la fonctionnalité du bus redéfinira la fin de l'évasion.
-		MatchService.endMatch("Defeat", "le bus n'est pas parti à temps")
 	elseif phase == "Ended" then
 		if SessionService.countPresent() > 0 then
 			startNewMatch(true)
@@ -222,9 +224,11 @@ function MatchService.rng(...: string | number): Random
 	return Rng.forContext(state.seed, ...)
 end
 
--- Commande de dev : force la fin de la phase courante (en Évasion : défaite provisoire).
+-- Commande de dev : force la fin de la phase courante. L'Évasion n'a plus de fin automatique
+-- (003-bus-evasion, research R6) : comme l'Attente, elle ne peut être sautée par cette commande —
+-- seul un départ réel (DepartBus) ou Dev.EndMatch y met fin.
 function MatchService.skipPhase(): boolean
-	if state.phase == "Waiting" then
+	if state.phase == "Waiting" or state.phase == "Escape" then
 		return false
 	end
 	log:info("Phase %s sautée (commande de dev)", state.phase)

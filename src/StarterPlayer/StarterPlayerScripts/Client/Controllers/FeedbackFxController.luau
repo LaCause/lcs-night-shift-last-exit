@@ -24,6 +24,7 @@ local FLASHES: { [string]: FlashDef } = {
 	OrderFailed = { color = Color3.fromRGB(200, 40, 40), peak = 0.58, duration = 0.7 },
 	GeneratorEmpty = { color = Color3.fromRGB(210, 100, 20), peak = 0.68, duration = 0.6 },
 	GeneratorRefueled = { color = Colors.Cyan, peak = 0.82, duration = 0.5 },
+	BusRepaired = { color = Colors.Good, peak = 0.68, duration = 0.7 },
 }
 
 local FeedbackFxController = { Name = "FeedbackFxController", Priority = 57 }

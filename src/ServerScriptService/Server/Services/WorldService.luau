@@ -21,13 +21,23 @@ local WorldService = { Name = "WorldService", Priority = 20 }
 
 local ready = false
 local restaurantSpawn: SpawnLocation? = nil
+local worldFolder: Folder? = nil
 
--- Un SpawnLocation hérité d'un gabarit Studio ferait apparaître les joueurs ailleurs.
-local function disableForeignSpawns()
+-- Restes d'un gabarit Studio (Baseplate, SpawnLocation par défaut) : détruits entièrement, pas
+-- seulement désactivés. Un SpawnLocation.Enabled = false reste un bloc solide et visible ; un
+-- Baseplate laissé en place est exactement coplanaire avec Workspace.World.Ground.Grass (les deux
+-- ont leur surface à y = 0), ce qui scintille (Z-fighting) au lieu de simplement disparaître
+-- derrière le sol construit par script.
+local function removeForeignTemplateParts()
+	local baseplate = workspace:FindFirstChild("Baseplate")
+	if baseplate ~= nil and baseplate:IsA("BasePart") then
+		baseplate:Destroy()
+		log:warn("Baseplate de gabarit Studio supprimé")
+	end
 	for _, descendant in workspace:GetDescendants() do
-		if descendant:IsA("SpawnLocation") and descendant.Enabled then
-			descendant.Enabled = false
-			log:warn("SpawnLocation étranger désactivé : %s", descendant:GetFullName())
+		if descendant:IsA("SpawnLocation") then
+			log:warn("SpawnLocation étranger supprimé : %s", descendant:GetFullName())
+			descendant:Destroy()
 		end
 	end
 end
@@ -59,7 +69,7 @@ function WorldService.Init()
 	if previous then
 		previous:Destroy()
 	end
-	disableForeignSpawns()
+	removeForeignTemplateParts()
 
 	local world = Instance.new("Folder")
 	world.Name = "World"
@@ -100,6 +110,7 @@ function WorldService.Init()
 	end
 
 	world.Parent = workspace
+	worldFolder = world
 
 	for _, id in RefPoints.Ids do
 		if refFolder:FindFirstChild(id) == nil then
@@ -115,6 +126,22 @@ end
 
 function WorldService.refPoint(id: string): BasePart?
 	return RefPoints.find(id)
+end
+
+-- Retrouve un modèle déjà construit depuis Layout.Visuals par son nom (ex. "Bus"), sous
+-- Workspace.World (003-bus-evasion, même esprit que refPoint, pour un visuel plutôt qu'un point
+-- de référence). Le modèle est construit une seule fois au démarrage du serveur (Init), jamais
+-- reconstruit par partie, contrairement à la forêt.
+function WorldService.visual(name: string): Model?
+	local folder = worldFolder
+	if folder == nil then
+		return nil
+	end
+	local found = folder:FindFirstChild(name)
+	if found ~= nil and found:IsA("Model") then
+		return found
+	end
+	return nil
 end
 
 function WorldService.spawnLocation(): SpawnLocation?

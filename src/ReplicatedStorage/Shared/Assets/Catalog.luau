@@ -61,6 +61,16 @@ local WALL_HEIGHT = 12
 local function newModel(name: string): Model
 	local model = Instance.new("Model")
 	model.Name = name
+	-- Fixé ici, avant toute pièce et avant tout PrimaryPart : le pivot du modèle est déclaré au
+	-- point (0,0,0) pendant qu'il n'y a encore rien à déplacer. `Model.WorldPivot = ...` déplace
+	-- le modèle pour amener son pivot *courant* à la valeur assignée — si on attendait (comme le
+	-- faisait l'ancien `finish`) qu'un PrimaryPart soit déjà posé, le pivot courant serait alors
+	-- la CFrame de ce PrimaryPart, et l'assignation décalerait tout le modèle de cette distance,
+	-- l'enfonçant dans le sol de la hauteur exacte de son PrimaryPart. En le fixant tout de suite,
+	-- l'assignation ne déplace rien (le modèle est vide), et chaque pièce ajoutée ensuite par
+	-- `block()` garde la CFrame telle qu'autorée — c'est ce que « pivot au sol, au centre » (le
+	-- commentaire d'en-tête de ce fichier) a toujours voulu dire.
+	model.WorldPivot = CFrame.identity
 	return model
 end
 
@@ -91,8 +101,9 @@ local function block(
 	return part
 end
 
+-- Le pivot est déjà fixé par `newModel` ; ce passage ne fait plus qu'assurer un point de sortie
+-- unique pour chaque builder (compatibilité des ~15 sites d'appel, sans changer leur forme).
 local function finish(model: Model): Model
-	model.WorldPivot = CFrame.identity
 	return model
 end
 
@@ -326,6 +337,12 @@ local function buildBus(): Model
 	block(model, "RustPatch", Vector3.new(8.25, 1.2, 2.5), CFrame.new(0, 2.2, 6), COLORS.BusStripe, {
 		material = Enum.Material.CorrodedMetal,
 	})
+	-- 003-bus-evasion : voyant de réparation, rouge tant que le bus n'est pas réparé, vert une
+	-- fois réparé (BusService bascule sa couleur, comme GeneratorLight pour le générateur).
+	block(model, "RepairLight", Vector3.new(0.3, 0.3, 0.3), CFrame.new(0, 5.6, -11.05), COLORS.Warning, {
+		material = Enum.Material.Neon,
+		collide = false,
+	})
 	return finish(model)
 end
 
@@ -433,6 +450,60 @@ local function buildDeliverCue(): Model
 	return finish(model)
 end
 
+-- 003-bus-evasion : tas de ferraille récoltable en forêt, même principe que les trois nœuds de
+-- ressource existants (PrimaryPart pour le ProximityPrompt et la bascule de disponibilité).
+local function buildScrapPile(): Model
+	local model = newModel("ScrapPile")
+	local body = block(model, "Body", Vector3.new(1.8, 1, 1.6), CFrame.new(0, 0.5, 0), COLORS.DarkSteel, {
+		material = Enum.Material.Metal,
+	})
+	block(
+		model,
+		"Plate",
+		Vector3.new(1.2, 0.15, 0.9),
+		CFrame.new(0.1, 1.05, 0.1) * CFrame.Angles(0, math.rad(20), 0),
+		COLORS.Steel,
+		{
+			material = Enum.Material.Metal,
+		}
+	)
+	block(
+		model,
+		"Rod",
+		Vector3.new(0.15, 0.15, 1.4),
+		CFrame.new(-0.3, 1.15, -0.2) * CFrame.Angles(math.rad(70), 0, 0),
+		COLORS.Steel,
+		{
+			shape = Enum.PartType.Cylinder,
+			material = Enum.Material.Metal,
+		}
+	)
+	model.PrimaryPart = body
+	return finish(model)
+end
+
+-- 004-sac-collecte : sac de portage. `ModelName` pointe vers l'asset inséré manuellement dans
+-- ReplicatedStorage.Assets ; ce remplaçant en primitives garde tout le portage jouable si l'asset
+-- est absent (principe VIII). `PrimaryPart` est la pièce reprise comme `Handle` du Tool par
+-- BagService, donc elle est obligatoire ici comme pour les nœuds de ressource.
+local function buildLittleBag(): Model
+	local model = newModel("LittleBag")
+	local body = block(model, "Body", Vector3.new(1.2, 1.4, 0.8), CFrame.new(0, 0.7, 0), COLORS.CueBag, {
+		material = Enum.Material.Fabric,
+		collide = false,
+	})
+	block(model, "Flap", Vector3.new(1.3, 0.35, 0.9), CFrame.new(0, 1.45, 0), COLORS.CueBag, {
+		material = Enum.Material.Fabric,
+		collide = false,
+	})
+	block(model, "Strap", Vector3.new(0.25, 1.3, 0.95), CFrame.new(0, 1.05, 0), COLORS.DarkSteel, {
+		material = Enum.Material.Fabric,
+		collide = false,
+	})
+	model.PrimaryPart = body
+	return finish(model)
+end
+
 local function buildFallbackProbe(): Model
 	local model = newModel("FallbackProbe")
 	block(model, "Probe", Vector3.new(2, 2, 2), CFrame.new(0, 1, 0), COLORS.NeonPink, { material = Enum.Material.Neon })
@@ -449,10 +520,14 @@ local Catalog: { [string]: Entry } = {
 	SuspectCooler = { BuildFallback = buildSuspectCooler },
 	RoadVendingMachine = { BuildFallback = buildRoadVendingMachine },
 	Enemy = { BuildFallback = buildEnemy },
+	-- 003-bus-evasion : nœud de ferraille, en primitive (original).
+	ScrapPile = { BuildFallback = buildScrapPile },
 	-- 002-premier-increment-jouable : repères visuels, marketplace + repli en primitives.
-	DepositCue = { ModelName = "DepositCueModel", BuildFallback = buildDepositCue },
+	DepositCue = { ModelName = "DepositCue", BuildFallback = buildDepositCue },
 	PrepareCue = { ModelName = "PrepareCueModel", BuildFallback = buildPrepareCue },
-	DeliverCue = { ModelName = "DeliverCueModel", BuildFallback = buildDeliverCue },
+	DeliverCue = { ModelName = "DeliverCue", BuildFallback = buildDeliverCue },
+	-- 004-sac-collecte : sac de portage, marketplace + repli en primitives.
+	LittleBag = { ModelName = "LittleBag", BuildFallback = buildLittleBag },
 	-- Entrée de test (Dev.TestVisualFallback) : son modèle est volontairement absent.
 	FallbackProbe = { ModelName = "__FallbackProbeMissing", BuildFallback = buildFallbackProbe, TestOnly = true },
 }
