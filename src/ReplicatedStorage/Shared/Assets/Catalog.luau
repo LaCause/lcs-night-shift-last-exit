@@ -51,6 +51,9 @@ local COLORS = {
 	-- Repères visuels flottants (dépôt, à préparer, à livrer) : remplaçants en primitives.
 	CueBag = Color3.fromRGB(196, 154, 96),
 	CueReady = Color3.fromRGB(222, 140, 60),
+	-- Décor : arbres autour du restaurant.
+	TreeTrunk = Color3.fromRGB(96, 68, 40),
+	TreeLeaves = Color3.fromRGB(52, 96, 46),
 }
 
 -- Oriente l'axe X d'un cylindre vers le haut.
@@ -504,6 +507,25 @@ local function buildLittleBag(): Model
 	return finish(model)
 end
 
+-- Décor : arbre planté par WorldService (research « décor du monde »). ModelName pointe vers
+-- l'asset inséré manuellement dans ReplicatedStorage.Assets (nommé « Three » par l'auteur du
+-- projet — conservé tel quel pour ne pas renommer une instance qui n'est pas gérée par Rojo).
+-- Pas de PrimaryPart ici : VisualService.placeOnGround pose ce modèle d'après sa boîte englobante
+-- réelle, jamais d'après son pivot (nécessaire de toute façon pour l'asset externe, dont le pivot
+-- ne correspond pas à sa base — ce remplaçant suit le même chemin par cohérence).
+local function buildTree(): Model
+	local model = newModel("Tree")
+	block(model, "Trunk", Vector3.new(1.2, 4, 1.2), CFrame.new(0, 2, 0), COLORS.TreeTrunk, {
+		material = Enum.Material.Wood,
+	})
+	block(model, "Canopy", Vector3.new(4, 4, 4), CFrame.new(0, 5.5, 0), COLORS.TreeLeaves, {
+		shape = Enum.PartType.Ball,
+		material = Enum.Material.Grass,
+		collide = false,
+	})
+	return finish(model)
+end
+
 local function buildFallbackProbe(): Model
 	local model = newModel("FallbackProbe")
 	block(model, "Probe", Vector3.new(2, 2, 2), CFrame.new(0, 1, 0), COLORS.NeonPink, { material = Enum.Material.Neon })
@@ -528,6 +550,8 @@ local Catalog: { [string]: Entry } = {
 	DeliverCue = { ModelName = "DeliverCue", BuildFallback = buildDeliverCue },
 	-- 004-sac-collecte : sac de portage, marketplace + repli en primitives.
 	LittleBag = { ModelName = "LittleBag", BuildFallback = buildLittleBag },
+	-- Décor : arbres, marketplace + repli en primitives.
+	Tree = { ModelName = "Three", BuildFallback = buildTree },
 	-- Entrée de test (Dev.TestVisualFallback) : son modèle est volontairement absent.
 	FallbackProbe = { ModelName = "__FallbackProbeMissing", BuildFallback = buildFallbackProbe, TestOnly = true },
 }

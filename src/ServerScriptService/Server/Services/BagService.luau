@@ -85,6 +85,12 @@ local function dropPosition(player: Player, root: BasePart, index: number, total
 	if forest ~= nil then
 		table.insert(exclusions, forest)
 	end
+	-- Sans exclure les arbres, un objet lâché près de l'un d'eux atterrirait sur une branche.
+	local world = workspace:FindFirstChild("World")
+	local trees = if world ~= nil then world:FindFirstChild("Trees") else nil
+	if trees ~= nil then
+		table.insert(exclusions, trees)
+	end
 	params.FilterDescendantsInstances = exclusions
 
 	local result = workspace:Raycast(around + Vector3.new(0, 2, 0), Vector3.new(0, -GROUND_PROBE, 0), params)

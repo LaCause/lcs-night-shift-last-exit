@@ -79,6 +79,22 @@ return {
 		FailSystemAtInit = { value = "", default = "", maxLength = 64 },
 	},
 
+	-- Décor statique du monde : construit une seule fois au démarrage du serveur (WorldService),
+	-- jamais régénéré par partie contrairement à la forêt — c'est de l'habillage, pas du gameplay.
+	World = {
+		-- Nombre d'arbres plantés autour du restaurant.
+		TreeCount = { value = 60, default = 60, min = 0, max = 300, kind = "integer" },
+		-- Distance minimale au centre, en studs : reste hors du complexe du restaurant (mêmes
+		-- proportions que Forest.AreaMinRadius, qui protège déjà cette zone).
+		TreeMinRadius = { value = 40, default = 40, min = 10, max = 200 },
+		-- Distance maximale au centre, en studs : un peu au-delà de Forest.AreaMaxRadius, pour
+		-- que le décor déborde légèrement de la zone de récolte.
+		TreeMaxRadius = { value = 170, default = 170, min = 20, max = 300 },
+		-- Distance minimale à tout point de référence (Bus, enseigne néon, etc.), en studs : évite
+		-- qu'un arbre pousse à travers un poste ou un décor existant.
+		TreeExclusionRadius = { value = 14, default = 14, min = 4, max = 40 },
+	},
+
 	-- 002-premier-increment-jouable : forêt et points de ressource.
 	Forest = {
 		-- Nombre de nœuds générés par partie, par type de ressource.

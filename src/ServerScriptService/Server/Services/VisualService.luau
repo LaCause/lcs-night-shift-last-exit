@@ -69,4 +69,25 @@ function VisualService.placeFresh(model: Model, cframe: CFrame)
 	end
 end
 
+-- Pose un modèle DONT LE PIVOT N'EST PAS FIABLE (asset externe inséré à la main : son
+-- `WorldPivot` reflète l'endroit où Studio l'a laissé, pas forcément sa base) au sol à `position`,
+-- tourné de `angleY` autour de l'axe vertical. Calcule sa boîte englobante réelle plutôt que de
+-- faire une hypothèse sur son origine — contrairement à `placeFresh`, qui suppose un modèle du
+-- catalogue autoré base-à-l'origine. Ancre chaque pièce au passage : un asset cloné depuis
+-- ReplicatedStorage est parfois `Anchored = false`, ce qui le ferait tomber dès la prochaine
+-- simulation physique sinon.
+function VisualService.placeOnGround(model: Model, position: Vector3, angleY: number)
+	local box, size = model:GetBoundingBox()
+	local lowestY = box.Position.Y - size.Y / 2
+	local pivot = CFrame.new(box.Position.X, lowestY, box.Position.Z)
+	local target = CFrame.new(position) * CFrame.Angles(0, angleY, 0)
+	local toPivotSpace = pivot:Inverse()
+	for _, descendant in model:GetDescendants() do
+		if descendant:IsA("BasePart") then
+			descendant.CFrame = target * (toPivotSpace * descendant.CFrame)
+			descendant.Anchored = true
+		end
+	end
+end
+
 return VisualService
