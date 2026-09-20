@@ -95,8 +95,6 @@ local TEXTS: { [string]: string } = {
 	["Notify.OrderPrepared"] = "Commande prête : {recipe}. File vers la fenêtre !",
 	["Notify.OrderDelivered"] = "Commande livrée : {recipe} !",
 	["Notify.OrderFailed"] = "Commande manquée : {recipe}. Quelque chose approche…",
-	["Hud.Order.None"] = "Aucune commande en cours",
-	["Hud.Order.Active"] = "{recipe} · {status}",
 	["Hud.Order.Status.Pending"] = "en attente",
 	["Hud.Order.Status.Preparing"] = "en cuisson",
 	["Hud.Order.Status.Prepared"] = "prête à livrer",
@@ -106,7 +104,6 @@ local TEXTS: { [string]: string } = {
 	-- Ennemi et santé
 	["Notify.EnemyHit"] = "Une présence vous a touché dans le noir.",
 	["Hud.Health"] = "Santé",
-	["Hud.Resources"] = "Ressources",
 
 	-- Panneau de développement, ajouts 002-premier-increment-jouable
 	["Dev.GiveResources"] = "Ressources +1",
@@ -140,7 +137,6 @@ local TEXTS: { [string]: string } = {
 	-- confirmation) : texte agnostique du nombre, valable pour 1 comme pour tout le sac
 	-- (005-depot-intelligent-sac, research R8).
 	["Notify.BagDropped"] = "Au sol : {amount} objet(s). Ils n'attendront pas éternellement.",
-	["Hud.Bag.NotEquipped"] = "non équipé",
 	-- 005-depot-intelligent-sac : la touche distingue désormais pression brève (un objet) et
 	-- maintien (tout le sac).
 	["Hud.Bag.Drop"] = "[G] lâcher · maintenir : tout vider",

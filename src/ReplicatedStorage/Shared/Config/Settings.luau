@@ -58,6 +58,8 @@ return {
 		NotificationLifetime = { value = 8, default = 8, min = 2, max = 30 },
 		-- Nombre de notifications visibles à la fois.
 		NotificationMax = { value = 5, default = 5, min = 1, max = 10, kind = "integer" },
+		-- Délai avant disparition d'une carte de commande terminée (livrée/ratée), en secondes.
+		OrderCardLinger = { value = 2.5, default = 2.5, min = 0, max = 10 },
 	},
 
 	Visuals = {

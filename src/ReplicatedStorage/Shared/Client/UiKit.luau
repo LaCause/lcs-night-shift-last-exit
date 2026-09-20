@@ -146,6 +146,29 @@ function UiKit.button(parent: Instance, name: string, text: string, onClick: () 
 	return button
 end
 
+-- Barre de progression : piste + remplissage. L'appelant fait varier `fill.Size` (fromScale(ratio,
+-- 1)) et `fill.BackgroundColor3` selon l'état ; la piste ne bouge jamais.
+function UiKit.bar(parent: Instance, name: string, size: UDim2, position: UDim2?, fillColor: Color3?): (Frame, Frame)
+	local track = Instance.new("Frame")
+	track.Name = name
+	track.Size = size
+	track.Position = position or UDim2.new()
+	track.BackgroundColor3 = UiKit.Colors.Ink
+	track.BackgroundTransparency = 0.15
+	track.BorderSizePixel = 0
+	track.ClipsDescendants = true
+	track.Parent = parent
+
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.BackgroundColor3 = fillColor or UiKit.Colors.Good
+	fill.BorderSizePixel = 0
+	fill.Parent = track
+
+	return track, fill
+end
+
 function UiKit.list(parent: Instance, padding: number?, horizontal: boolean?): UIListLayout
 	local layout = Instance.new("UIListLayout")
 	layout.Padding = UDim.new(0, padding or 4)
