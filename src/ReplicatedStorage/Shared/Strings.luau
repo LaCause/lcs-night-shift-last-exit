@@ -34,7 +34,6 @@ local TEXTS: { [string]: string } = {
 	["Notify.PlayerLeft"] = "{name} a quitté son poste sans prévenir.",
 	["Notify.StatusChanged.Eliminated"] = "{name} est hors service.",
 	["Notify.StatusChanged.Alive"] = "{name} reprend du service.",
-	["Notify.BellRang"] = "{name} a sonné. Personne n'est venu.",
 	["Notify.MatchEnded.Victory"] = "Victoire ! Le dernier service est bouclé.",
 	["Notify.MatchEnded.Defeat"] = "Défaite. Le restaurant a baissé le rideau.",
 
@@ -47,8 +46,6 @@ local TEXTS: { [string]: string } = {
 	-- Monde et interactions
 	["World.SignTitle"] = "LAST EXIT",
 	["World.SignSubtitle"] = "DRIVE-THRU · OUVERT 24H/24 (en théorie)",
-	["Bell.Action"] = "Sonner",
-	["Bell.Object"] = "Sonnette",
 
 	-- Panneau de développement (Studio uniquement)
 	["Dev.Title"] = "OUTILS DEV",

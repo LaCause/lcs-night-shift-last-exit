@@ -13,7 +13,6 @@ local IDS: { Types.RefPointId } = {
 	"DriveThruWindow",
 	"Intercom",
 	"Counter",
-	"CounterBell",
 	"Worktop",
 	"Fryer",
 	"Generator",

@@ -16,14 +16,13 @@ local visuals: { Placement } = {
 	{ visual = "Bus", cframe = CFrame.new(36, 0, 22) * CFrame.Angles(0, math.rad(15), 0) },
 }
 
--- Spawn est à ~25 studs de CounterBell, soit plus que Bell.Range + Net.DistanceTolerance :
+-- Spawn est loin du Générateur, bien plus que Generator.InteractRange + Net.DistanceTolerance :
 -- le cas « trop loin » de la liste de contrôle se teste depuis le point d'apparition.
 local refPoints: { [string]: RefPointSpec } = {
 	Spawn = { cframe = CFrame.new(0, 0.5, -30) * FACE_NORTH },
 	DriveThruWindow = { cframe = CFrame.new(20, 6, 4) },
 	Intercom = { cframe = CFrame.new(28.2, 4.6, -8) },
 	Counter = { cframe = CFrame.new(0, 4.8, -6) },
-	CounterBell = { cframe = CFrame.new(3, 5.3, -6), size = Vector3.new(1, 1, 1) },
 	Worktop = { cframe = CFrame.new(6, 4.5, 6) },
 	Fryer = { cframe = CFrame.new(-6, 5, 6) },
 	-- Devant le générateur (GeneratorBody dans Catalog.luau, centré en (-14, 2.4, 18) sur la

@@ -30,7 +30,6 @@ local FEED_KINDS = {
 	"PlayerJoined",
 	"PlayerLeft",
 	"StatusChanged",
-	"BellRang",
 	"MatchEnded",
 	"OrderPrepared",
 	"BusRepaired",

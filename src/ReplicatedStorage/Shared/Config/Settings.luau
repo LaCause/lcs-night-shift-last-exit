@@ -53,13 +53,6 @@ return {
 		RejectionHistory = { value = 100, default = 100, min = 10, max = 1000, kind = "integer" },
 	},
 
-	Bell = {
-		-- Portée de la sonnette, en studs.
-		Range = { value = 10, default = 10, min = 4, max = 30 },
-		-- Délai de réutilisation, en secondes (commun à tous les joueurs).
-		Cooldown = { value = 2, default = 2, min = 0.5, max = 30 },
-	},
-
 	Ui = {
 		-- Durée d'affichage d'une notification, en secondes.
 		NotificationLifetime = { value = 8, default = 8, min = 2, max = 30 },

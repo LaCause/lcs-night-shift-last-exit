@@ -351,7 +351,7 @@ end
 
 -- 002-premier-increment-jouable : nœuds de ressource de la forêt. Chaque modèle a un
 -- PrimaryPart, sur lequel ForestService accroche le ProximityPrompt et bascule la
--- disponibilité (transparence, collision, prompt actif) — même principe que CounterBell.
+-- disponibilité (transparence, collision, prompt actif).
 local function buildFuelCanister(): Model
 	local model = newModel("FuelCanister")
 	local body = block(model, "Body", Vector3.new(1.4, 2, 1.4), CFrame.new(0, 1, 0), COLORS.FuelCanister, {

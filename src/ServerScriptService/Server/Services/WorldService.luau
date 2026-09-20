@@ -12,8 +12,6 @@ local RefPoints = require(Shared.World.RefPoints)
 local Layout = require(script.Parent.Parent.World.Layout)
 local VisualService = require(script.Parent.VisualService)
 
-local BELL_ID = "CounterBell"
-local BELL_COLOR = Color3.fromRGB(230, 190, 70)
 local SPAWN_COLOR = Color3.fromRGB(236, 220, 120)
 
 -- Décor statique, planté une seule fois au démarrage du serveur : une seed fixe suffit (rien à
@@ -56,14 +54,8 @@ local function buildRefPoint(id: string, spec: Layout.RefPointSpec, parent: Inst
 	part.CanCollide = false
 	part.CanTouch = false
 	part.CanQuery = false
-	if id == BELL_ID then
-		part.Shape = Enum.PartType.Ball
-		part.Material = Enum.Material.Metal
-		part.Color = BELL_COLOR
-	else
-		part.Transparency = 1
-		part.CastShadow = false
-	end
+	part.Transparency = 1
+	part.CastShadow = false
 	part.Size = spec.size or Vector3.one
 	part.CFrame = spec.cframe
 	part:SetAttribute(RefPoints.Tag, id)
