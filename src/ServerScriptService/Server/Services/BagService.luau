@@ -28,6 +28,9 @@ type BagDef = { CapacitySetting: string, VisualId: string }
 
 local BAG_TYPES: { [string]: BagDef } = {
 	LittleBag = { CapacitySetting = "SmallCapacity", VisualId = "LittleBag" },
+	-- 008-boutique-persistance : avantage de départ "sac de départ agrandi" (research R6). Même
+	-- visuel que LittleBag (aucun nouvel asset, principe VIII) : seule la contenance change.
+	MediumBag = { CapacitySetting = "MediumCapacity", VisualId = "LittleBag" },
 }
 
 -- Ressources qui occupent de la place dans le sac : les mêmes compteurs que l'inventaire
@@ -117,6 +120,18 @@ end
 function BagService.typeOf(player: Player): BagType
 	local value = player:GetAttribute("BagType")
 	return if typeof(value) == "string" then value :: BagType else defaultType()
+end
+
+-- Change le type de sac d'un joueur déjà assigné (008-boutique-persistance, research R6/R7) :
+-- utilisée uniquement par BoutiqueService, une fois son propre chargement résolu, jamais par un
+-- client. N'affecte pas le sac déjà en main : le nouveau type n'est repris qu'à la prochaine
+-- apparition du personnage (SessionService.respawnAll à chaque début de partie, giveBag lit
+-- BagType à ce moment-là) — cohérent avec FR-010 (l'avantage s'applique à la partie suivante, pas
+-- à celle en cours).
+function BagService.setType(player: Player, bagType: BagType)
+	local def = defFor(bagType)
+	player:SetAttribute("BagType", bagType)
+	player:SetAttribute("BagCapacity", Config.get("Bag", def.CapacitySetting))
 end
 
 local function assignBag(player: Player, bagType: BagType)

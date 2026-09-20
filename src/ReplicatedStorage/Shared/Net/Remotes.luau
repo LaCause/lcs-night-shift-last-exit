@@ -163,6 +163,16 @@ local intents: { [string]: IntentDecl } = {
 	-- 004-sac-collecte (contracts/network.md, commandes de dev ajoutées).
 	["Dev.FillBag"] = { schema = EMPTY, devOnly = true },
 	["Dev.EmptyBag"] = { schema = EMPTY, devOnly = true },
+
+	-- 008-boutique-persistance (contracts/server-api.md, research R9). Déclenchées depuis un
+	-- bouton d'interface, pas une invite de proximité : aucune cible, aucune restriction de phase
+	-- (achetable à tout moment, en partie ou non — FR-001).
+	BuyItem = {
+		schema = Validate.object({ itemId = Validate.string(maxString) }),
+	},
+	SetActiveCosmetic = {
+		schema = Validate.object({ itemId = Validate.string(maxString) }),
+	},
 }
 
 local Remotes = {

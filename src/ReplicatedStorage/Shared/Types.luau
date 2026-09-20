@@ -11,17 +11,19 @@ export type PlayerStatus = "Alive" | "Eliminated"
 -- "Scrap" ajouté par 003-bus-evasion (data-model.md) : sert uniquement à réparer le bus.
 export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread" | "Scrap"
 
--- Sacs de portage (004-sac-collecte, data-model.md). Un seul type pour l'instant : la table
--- BAG_TYPES de BagService est conçue pour en accueillir d'autres (contenances supérieures) sans
--- logique nouvelle, seulement une entrée de plus.
-export type BagType = "LittleBag"
+-- Sacs de portage (004-sac-collecte, data-model.md). "MediumBag" ajouté par
+-- 008-boutique-persistance (avantage de départ "sac de départ agrandi") : la table BAG_TYPES de
+-- BagService était conçue pour en accueillir d'autres sans logique nouvelle, seulement une entrée
+-- de plus (research R6).
+export type BagType = "LittleBag" | "MediumBag"
 
 -- État de la commande de la nuit (data-model.md, « Commande »).
 -- "Preparing" ajouté : la préparation dure désormais Kitchen.PrepareDuration secondes au lieu
 -- d'être instantanée (retour visuel/sonore pendant la cuisson).
 export type OrderStatus = "" | "Pending" | "Preparing" | "Prepared" | "Delivered" | "Failed"
 
-export type RejectCode = "BadEnvelope"
+export type RejectCode =
+	"BadEnvelope"
 	| "UnknownAction"
 	| "NotAllowed"
 	| "RateLimited"
@@ -46,8 +48,14 @@ export type RejectCode = "BadEnvelope"
 	| "NotCarrying"
 	| "BagNotEquipped"
 	| "BagEmpty"
+	-- Ajoutés par 008-boutique-persistance (contracts/server-api.md).
+	| "ItemUnknown"
+	| "AlreadyOwned"
+	| "InsufficientFunds"
+	| "NotOwned"
 
-export type RefPointId = "Spawn"
+export type RefPointId =
+	"Spawn"
 	| "DriveThruWindow"
 	| "Intercom"
 	| "Counter"

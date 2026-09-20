@@ -191,6 +191,8 @@ return {
 		MaxCoordinate = { value = 2000, default = 2000, min = 100, max = 10000 },
 		-- Fréquence du lancer de rayon du pointeur côté client, en Hz.
 		PointerRefreshRate = { value = 15, default = 15, min = 5, max = 60, kind = "integer" },
+		-- 008-boutique-persistance : contenance du sac agrandi (avantage de départ "BiggerBag").
+		MediumCapacity = { value = 8, default = 8, min = 1, max = 50, kind = "integer" },
 	},
 
 	-- 002-premier-increment-jouable : transition d'éclairage et de brouillard entre phases.
@@ -214,6 +216,16 @@ return {
 		NightlyGrowth = { value = 5, default = 5, min = 0, max = 200 },
 		-- Bonus versé par nuit survécue, au moment d'une évasion réussie.
 		EscapeBonusPerNight = { value = 25, default = 25, min = 1, max = 1000 },
+		-- Nombre de tentatives avant d'abandonner un chargement ou une écriture en échec.
+		SaveRetryAttempts = { value = 3, default = 3, min = 1, max = 10, kind = "integer" },
+		-- Délai entre deux tentatives, en secondes.
+		SaveRetryDelay = { value = 2, default = 2, min = 0.5, max = 30 },
+	},
+
+	-- 008-boutique-persistance : boutique d'objets cosmétiques et avantages de départ. Mêmes
+	-- valeurs que Currency.SaveRetryAttempts/SaveRetryDelay (006), dupliquées plutôt que partagées
+	-- pour garder les deux DataStores indépendants l'un de l'autre (research R3).
+	Boutique = {
 		-- Nombre de tentatives avant d'abandonner un chargement ou une écriture en échec.
 		SaveRetryAttempts = { value = 3, default = 3, min = 1, max = 10, kind = "integer" },
 		-- Délai entre deux tentatives, en secondes.

@@ -77,9 +77,26 @@ local function save(player: Player)
 			store:SetAsync(keyFor(player), balance)
 		end)
 		if not ok then
-			log:error("Écriture du solde de %s en échec après nouvelle(s) tentative(s) : %s", player.Name, tostring(err))
+			log:error(
+				"Écriture du solde de %s en échec après nouvelle(s) tentative(s) : %s",
+				player.Name,
+				tostring(err)
+			)
 		end
 	end)
+end
+
+-- Débite `amount` si le solde le permet (008-boutique-persistance, research R8) : décrémente
+-- l'attribut Currency et réutilise `save` déjà existante, sans changer sa politique de nouvelle(s)
+-- tentative(s). Ne fait rien et renvoie false si le solde est insuffisant — CurrencyService reste
+-- l'unique écrivain de l'attribut Currency (principe III).
+function CurrencyService.spend(player: Player, amount: number): boolean
+	if CurrencyService.balanceOf(player) < amount then
+		return false
+	end
+	player:SetAttribute("Currency", CurrencyService.balanceOf(player) - amount)
+	save(player)
+	return true
 end
 
 -- Crédite `amount` à chaque joueur présent (`SessionService.all()`, sans distinction de statut :
@@ -106,7 +123,11 @@ local function loadPlayer(player: Player)
 	if ok and typeof(result) == "number" then
 		balance = result
 	elseif not ok then
-		log:error("Chargement du solde de %s en échec après nouvelle(s) tentative(s) : %s", player.Name, tostring(result))
+		log:error(
+			"Chargement du solde de %s en échec après nouvelle(s) tentative(s) : %s",
+			player.Name,
+			tostring(result)
+		)
 	end
 	if player.Parent == nil then
 		-- Le joueur est parti pendant le chargement asynchrone : ne rien poser, InventoryService

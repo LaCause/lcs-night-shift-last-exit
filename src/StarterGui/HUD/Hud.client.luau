@@ -23,6 +23,14 @@ local MatchStateClient = require(ClientFolder:WaitForChild("MatchStateClient") :
 local NetClient = require(ClientFolder:WaitForChild("NetClient") :: ModuleScript)
 local UiKit = require(ClientFolder:WaitForChild("UiKit") :: ModuleScript)
 
+-- 008-boutique-persistance : le contrôleur du panneau boutique vit dans Controllers/ (chargé par
+-- Loader depuis Main.client.luau), rejoint ici via PlayerScripts — même arborescence que
+-- StarterPlayerScripts une fois répliquée au joueur (research R11).
+local PlayerScripts = Players.LocalPlayer:WaitForChild("PlayerScripts")
+local BoutiquePanelController = require(
+	PlayerScripts:WaitForChild("Client"):WaitForChild("Controllers"):WaitForChild("BoutiquePanelController") :: ModuleScript
+)
+
 type GameplayState = GameplayStateClient.State
 
 local screen = script.Parent :: ScreenGui
@@ -409,6 +417,16 @@ local function refreshOrders()
 		end)
 	end
 end
+
+-- Bouton boutique (coin bas droit, libre : le fil de notifications occupe le bas gauche, la
+-- colonne Vie/Équipe le haut droit) ---------------------------------------------------------
+
+local boutiqueButton = UiKit.button(screen, "BoutiqueButton", Strings.format("Hud.Boutique"), function()
+	BoutiquePanelController.Toggle()
+end)
+boutiqueButton.Size = UDim2.fromOffset(120, 34)
+boutiqueButton.Position = UDim2.new(1, -12, 1, -12)
+boutiqueButton.AnchorPoint = Vector2.new(1, 1)
 
 -- Fil de notifications (en bas à gauche) ---------------------------------------------------
 

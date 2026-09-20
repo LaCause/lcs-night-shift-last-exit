@@ -155,6 +155,27 @@ local TEXTS: { [string]: string } = {
 	-- Panneau de développement, ajouts 004-sac-collecte
 	["Dev.FillBag"] = "Remplir le sac",
 	["Dev.EmptyBag"] = "Vider le sac",
+
+	-- 008-boutique-persistance : boutique d'objets cosmétiques et avantages de départ.
+	["Hud.Boutique"] = "Boutique",
+	["Boutique.Title"] = "BOUTIQUE",
+	["Boutique.Buy"] = "Acheter ({price})",
+	["Boutique.Owned"] = "Possédé",
+	["Boutique.Active"] = "Actif",
+	["Boutique.SetActive"] = "Utiliser",
+	["Boutique.InsufficientFunds"] = "Solde insuffisant",
+	["Boutique.Item.BagTintRed"] = "Sac — teinte rouge",
+	["Boutique.Item.BagTintRed.Desc"] = "Un sac reteint d'un rouge vif. Purement cosmétique.",
+	["Boutique.Item.BagTintBlue"] = "Sac — teinte bleue",
+	["Boutique.Item.BagTintBlue.Desc"] = "Un sac reteint d'un bleu profond. Purement cosmétique.",
+	["Boutique.Item.BusPaintTeal"] = "Bus — peinture turquoise",
+	["Boutique.Item.BusPaintTeal.Desc"] = "Une nouvelle couche de peinture sur le vieux bus.",
+	["Boutique.Item.CounterGlowPink"] = "Comptoir — éclairage rose",
+	["Boutique.Item.CounterGlowPink.Desc"] = "Un éclairage rose néon sous le comptoir.",
+	["Boutique.Item.BiggerBag"] = "Sac de départ agrandi",
+	["Boutique.Item.BiggerBag.Desc"] = "Commencez chaque partie avec un sac de plus grande contenance.",
+	-- Nom du Tool du sac agrandi (BagService, même patron que Bag.LittleBag).
+	["Bag.MediumBag"] = "Grand sac",
 }
 
 local warned: { [string]: boolean } = {}
