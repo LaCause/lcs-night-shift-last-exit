@@ -25,12 +25,6 @@ local EMPTY = Validate.object({})
 local NIGHT_ONLY = { "Night" }
 
 local intents: { [string]: IntentDecl } = {
-	RingBell = {
-		schema = Validate.object({ target = Validate.string(maxString) }),
-		phases = PLAYABLE,
-		target = { field = "target", rangeSetting = "Bell.Range" },
-	},
-
 	-- 002-premier-increment-jouable (contracts/network.md).
 	HarvestResource = {
 		-- Clé "target" (et non "node") : InteractionController envoie {target = ...} pour toute
@@ -40,8 +34,7 @@ local intents: { [string]: IntentDecl } = {
 		target = { field = "target", rangeSetting = "Forest.HarvestRange" }, -- résolu par ForestService.findNode
 	},
 	-- Ces quatre intentions visent chacune un point de référence fixe unique ; le schéma reste
-	-- un `target` générique (comme RingBell) et le gestionnaire vérifie l'identifiant exact
-	-- (défense en profondeur, même motif que BellService).
+	-- un `target` générique et le gestionnaire vérifie l'identifiant exact (défense en profondeur).
 	DepositResources = {
 		schema = Validate.object({ target = Validate.string(maxString) }),
 		phases = PLAYABLE,
@@ -175,7 +168,6 @@ local Remotes = {
 		"PlayerJoined",
 		"PlayerLeft",
 		"StatusChanged",
-		"BellRang",
 		"MatchEnded",
 		"DevReport",
 		-- 002-premier-increment-jouable (contracts/network.md).

@@ -53,18 +53,13 @@ return {
 		RejectionHistory = { value = 100, default = 100, min = 10, max = 1000, kind = "integer" },
 	},
 
-	Bell = {
-		-- Portée de la sonnette, en studs.
-		Range = { value = 10, default = 10, min = 4, max = 30 },
-		-- Délai de réutilisation, en secondes (commun à tous les joueurs).
-		Cooldown = { value = 2, default = 2, min = 0.5, max = 30 },
-	},
-
 	Ui = {
 		-- Durée d'affichage d'une notification, en secondes.
 		NotificationLifetime = { value = 8, default = 8, min = 2, max = 30 },
 		-- Nombre de notifications visibles à la fois.
 		NotificationMax = { value = 5, default = 5, min = 1, max = 10, kind = "integer" },
+		-- Délai avant disparition d'une carte de commande terminée (livrée/ratée), en secondes.
+		OrderCardLinger = { value = 2.5, default = 2.5, min = 0, max = 10 },
 	},
 
 	Visuals = {
@@ -77,6 +72,22 @@ return {
 		LogLevel = { value = "Info", default = "Info", choices = { "Debug", "Info", "Warn", "Error" } },
 		-- Nom d'un système à faire échouer au démarrage (Studio uniquement), pour tester l'isolation.
 		FailSystemAtInit = { value = "", default = "", maxLength = 64 },
+	},
+
+	-- Décor statique du monde : construit une seule fois au démarrage du serveur (WorldService),
+	-- jamais régénéré par partie contrairement à la forêt — c'est de l'habillage, pas du gameplay.
+	World = {
+		-- Nombre d'arbres plantés autour du restaurant.
+		TreeCount = { value = 60, default = 60, min = 0, max = 300, kind = "integer" },
+		-- Distance minimale au centre, en studs : reste hors du complexe du restaurant (mêmes
+		-- proportions que Forest.AreaMinRadius, qui protège déjà cette zone).
+		TreeMinRadius = { value = 40, default = 40, min = 10, max = 200 },
+		-- Distance maximale au centre, en studs : un peu au-delà de Forest.AreaMaxRadius, pour
+		-- que le décor déborde légèrement de la zone de récolte.
+		TreeMaxRadius = { value = 170, default = 170, min = 20, max = 300 },
+		-- Distance minimale à tout point de référence (Bus, enseigne néon, etc.), en studs : évite
+		-- qu'un arbre pousse à travers un poste ou un décor existant.
+		TreeExclusionRadius = { value = 14, default = 14, min = 4, max = 40 },
 	},
 
 	-- 002-premier-increment-jouable : forêt et points de ressource.

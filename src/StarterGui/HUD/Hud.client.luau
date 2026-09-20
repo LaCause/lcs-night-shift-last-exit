@@ -1,10 +1,13 @@
 --!strict
--- HUD (FR-035, FR-036) : phase, nuit, temps restant, équipe et fil de notifications.
--- N'affiche que l'état répliqué par le serveur (principe III).
+-- HUD (FR-035, FR-036) : phase, nuit, temps restant, équipe, vie, commandes en cours et fil de
+-- notifications. N'affiche que l'état répliqué par le serveur (principe III).
 --
--- Disposition : bandeau en haut au centre, colonne équipe + ressources à droite, fil de
--- notifications en bas à gauche. Le coin haut gauche reste libre pour le chat Roblox et le
--- panneau de dev de Studio (DevPanel.client.luau).
+-- Disposition : bandeau en haut au centre, cartes de commande sous le bandeau, colonne vie +
+-- équipe à droite, fil de notifications en bas à gauche. Le carburant, la zone sûre et la
+-- réparation du bus vivent désormais dans le monde, près de ce qu'ils décrivent (voir
+-- FuelGaugeController, BusRepairController) ; le détail du sac, au-dessus du joueur quand il est
+-- équipé (BagStatusController). Le coin haut gauche reste libre pour le chat Roblox et le panneau
+-- de dev de Studio (DevPanel.client.luau).
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -20,6 +23,8 @@ local MatchStateClient = require(ClientFolder:WaitForChild("MatchStateClient") :
 local NetClient = require(ClientFolder:WaitForChild("NetClient") :: ModuleScript)
 local UiKit = require(ClientFolder:WaitForChild("UiKit") :: ModuleScript)
 
+type GameplayState = GameplayStateClient.State
+
 local screen = script.Parent :: ScreenGui
 local Colors = UiKit.Colors
 
@@ -30,7 +35,6 @@ local FEED_KINDS = {
 	"PlayerJoined",
 	"PlayerLeft",
 	"StatusChanged",
-	"BellRang",
 	"MatchEnded",
 	"OrderPrepared",
 	"BusRepaired",
@@ -146,9 +150,40 @@ local function panelRow(panel: Frame, name: string, text: string, color: Color3?
 	})
 end
 
+-- Vie (toujours visible, en tête de la colonne de droite) -------------------------------------
+
+local healthPanel = sidePanel("Health", 1)
+panelTitle(healthPanel, Strings.format("Hud.Health"))
+
+local healthTrack, healthFill = UiKit.bar(healthPanel, "Bar", UDim2.new(1, 0, 0, 14))
+healthTrack.LayoutOrder = 1
+UiKit.corner(healthTrack, 6)
+UiKit.corner(healthFill, 6)
+
+local healthText = panelRow(healthPanel, "Text", "")
+healthText.LayoutOrder = 2
+
+local previousHealth: number? = nil
+
+local function refreshHealth()
+	local state = GameplayStateClient.get()
+	local ratio = if state.maxHealth > 0 then math.clamp(state.health / state.maxHealth, 0, 1) else 0
+	local steady = if state.health <= state.maxHealth * 0.3 then Colors.Bad else Colors.Good
+	healthFill.Size = UDim2.fromScale(ratio, 1)
+	healthFill.BackgroundColor3 = steady
+	healthText.Text = `{math.floor(state.health)} / {math.floor(state.maxHealth)}`
+
+	if previousHealth ~= nil and state.health ~= previousHealth then
+		local accent = if state.health > previousHealth then Colors.Good else Colors.Bad
+		healthFill.BackgroundColor3 = accent
+		TweenService:Create(healthFill, TweenInfo.new(0.4, Enum.EasingStyle.Quad), { BackgroundColor3 = steady }):Play()
+	end
+	previousHealth = state.health
+end
+
 -- Équipe ------------------------------------------------------------------------------------
 
-local teamPanel = sidePanel("Team", 1)
+local teamPanel = sidePanel("Team", 2)
 local teamTitle = panelTitle(teamPanel, Strings.format("Hud.Team"))
 
 local function rebuildTeam(leaving: Player?)
@@ -192,162 +227,181 @@ local function watch(player: Player)
 	end)
 end
 
--- Ressources et jauges du joueur (002-premier-increment-jouable) ------------------------------
+-- Commandes en attente (une carte animée par commande active) ---------------------------------
+-- Amélioration visuelle : remplace la ligne texte unique qui vivait dans l'ancienne box
+-- « Ressources ». Écrit dès aujourd'hui comme une liste de cartes (indexées par clé, pas un seul
+-- slot fixe) même si le serveur ne produit qu'une commande à la fois (OrderService) : le jour où
+-- plusieurs commandes tourneront en parallèle, seule la source (une commande → un tableau de
+-- commandes) changera, pas ce rendu.
 
-local gameplayPanel = sidePanel("Gameplay", 2)
-panelTitle(gameplayPanel, Strings.format("Hud.Resources"))
+local ordersColumn =
+	UiKit.frame(screen, "Orders", UDim2.fromScale(0.3, 0), UDim2.fromScale(0.5, 0.14), Vector2.new(0.5, 0))
+ordersColumn.BackgroundTransparency = 1
+ordersColumn.AutomaticSize = Enum.AutomaticSize.Y
+UiKit.sizeLimits(ordersColumn, Vector2.new(220, 0), Vector2.new(340, math.huge))
+UiKit.list(ordersColumn, 8)
 
-local gameplayRows: { [string]: TextLabel } = {}
+type OrderCard = {
+	frame: CanvasGroup,
+	title: TextLabel,
+	statusLabel: TextLabel,
+	progressTrack: Frame,
+	progressFill: Frame,
+	ingredientsLabel: TextLabel,
+	stage: string,
+	cookingStartedAt: number?,
+	removing: boolean,
+}
 
--- Une ligne par clé, créée au premier appel puis seulement mise à jour.
-local function gameplayRow(key: string, order: number): TextLabel
-	local row = gameplayRows[key]
-	if row == nil then
-		row = panelRow(gameplayPanel, key, "")
-		row.LayoutOrder = order
-		gameplayRows[key] = row
-	end
-	return row
+local orderCards: { [string]: OrderCard } = {}
+-- Identifie l'instance de commande en cours (pas juste sa recette, qui peut se répéter d'une nuit
+-- à l'autre) : assigné à la première apparition d'un statut non-vide, oublié seulement quand le
+-- serveur revient à "" (OrderService.clearOrder, au changement de phase suivant — pas aussitôt
+-- après Livrée/Ratée : une commande livrée en milieu de nuit reste "Delivered" jusqu'à la fin de
+-- la nuit). `finalizedKeys` retient qu'une instance a déjà joué sa disparition, pour ignorer les
+-- rafraîchissements suivants tant que le statut reste au même palier terminal.
+local activeOrderKey: string? = nil
+local finalizedKeys: { [string]: boolean } = {}
+local orderSeq = 0
+
+local function buildOrderCard(order: number): OrderCard
+	local frame = Instance.new("CanvasGroup")
+	frame.Name = `Card{order}`
+	frame.Size = UDim2.new(1, 0, 0, 0)
+	frame.AutomaticSize = Enum.AutomaticSize.Y
+	frame.LayoutOrder = order
+	frame.BackgroundColor3 = Colors.Panel
+	frame.BackgroundTransparency = 0.15
+	frame.BorderSizePixel = 0
+	frame.GroupTransparency = 1
+	frame.Parent = ordersColumn
+	UiKit.corner(frame, 10)
+	UiKit.stroke(frame, Colors.Cyan, 1.5)
+	UiKit.padding(frame, 8)
+	UiKit.list(frame, 4)
+
+	local title = UiKit.label(frame, "Title", "", UDim2.new(1, 0, 0, 22), {
+		font = UiKit.Fonts.Title,
+		color = Colors.Cyan,
+		align = Enum.TextXAlignment.Left,
+		maxSize = 18,
+	})
+	title.LayoutOrder = 1
+
+	local statusLabel = panelRow(frame, "Status", "")
+	statusLabel.LayoutOrder = 2
+
+	local progressTrack, progressFill = UiKit.bar(frame, "Progress", UDim2.new(1, 0, 0, 8))
+	progressTrack.LayoutOrder = 3
+	progressFill.BackgroundColor3 = Colors.Warn
+	UiKit.corner(progressTrack, 4)
+	UiKit.corner(progressFill, 4)
+
+	local ingredientsLabel = panelRow(frame, "Ingredients", "", Colors.Muted)
+	ingredientsLabel.LayoutOrder = 4
+
+	TweenService:Create(frame, TweenInfo.new(0.25, Enum.EasingStyle.Quad), { GroupTransparency = 0 }):Play()
+
+	return {
+		frame = frame,
+		title = title,
+		statusLabel = statusLabel,
+		progressTrack = progressTrack,
+		progressFill = progressFill,
+		ingredientsLabel = ingredientsLabel,
+		stage = "",
+		cookingStartedAt = nil,
+		removing = false,
+	}
 end
 
--- Petit « coup de pouce » visuel (FR-035/FR-036, retour immédiat) : la ligne bascule dans une
--- couleur d'accent puis retourne à sa couleur normale, sans dépendre d'une notification réseau —
--- ça marche même si Notify arrive dans un ordre différent de Changed.
-local previousGameplay: { [string]: number } = {}
-local activeTweens: { [TextLabel]: Tween } = {}
-
-local function punch(row: TextLabel, accent: Color3, steady: Color3)
-	local existing = activeTweens[row]
-	if existing then
-		existing:Cancel()
+local function removeOrderCard(key: string)
+	local card = orderCards[key]
+	if card == nil or card.removing then
+		return
 	end
-	row.TextColor3 = accent
-	local tween = TweenService:Create(row, TweenInfo.new(0.4, Enum.EasingStyle.Quad), { TextColor3 = steady })
-	activeTweens[row] = tween
+	card.removing = true
+	local tween = TweenService:Create(card.frame, TweenInfo.new(0.3, Enum.EasingStyle.Quad), { GroupTransparency = 1 })
 	tween.Completed:Connect(function()
-		if activeTweens[row] == tween then
-			activeTweens[row] = nil
+		card.frame:Destroy()
+		if orderCards[key] == card then
+			orderCards[key] = nil
 		end
 	end)
 	tween:Play()
 end
 
--- Punch sur tout changement (récolte = gain, dépôt/ravitaillement = perte utile : les deux sont
--- une action réussie, donc le même accent positif dans les deux sens).
-local function punchOnChange(key: string, row: TextLabel, value: number, steady: Color3)
-	local previous = previousGameplay[key]
-	if previous ~= nil and value ~= previous then
-		punch(row, Colors.Good, steady)
+local function updateOrderCard(card: OrderCard, state: GameplayState)
+	if card.stage ~= state.orderStatus then
+		if state.orderStatus == "Preparing" then
+			card.cookingStartedAt = os.clock()
+		end
+		card.stage = state.orderStatus
 	end
-	previousGameplay[key] = value
-end
 
--- Punch seulement à la hausse (santé) ou (carburant) : une baisse de carburant par la
--- consommation normale ne doit pas clignoter à chaque seconde.
-local function punchOnRise(key: string, row: TextLabel, value: number, steady: Color3)
-	local previous = previousGameplay[key]
-	if previous ~= nil and value > previous then
-		punch(row, Colors.Good, steady)
-	end
-	previousGameplay[key] = value
-end
+	local recipe = GameplayStateClient.getOrderRecipe()
+	card.title.Text = if recipe then Strings.format(recipe.NameKey) else state.orderRecipeId
 
-local function refreshGameplay()
-	local state = GameplayStateClient.get()
-	local healthRow = gameplayRow("Health", 1)
-	healthRow.Text = `{Strings.format("Hud.Health")} : {math.floor(state.health)}/{math.floor(state.maxHealth)}`
-	local healthColor = if state.health <= state.maxHealth * 0.3 then Colors.Bad else Colors.Text
-	healthRow.TextColor3 = healthColor
-	local previousHealth = previousGameplay.Health
-	if previousHealth ~= nil and state.health ~= previousHealth then
-		punch(healthRow, if state.health > previousHealth then Colors.Good else Colors.Bad, healthColor)
-	end
-	previousGameplay.Health = state.health
-
-	-- 004-sac-collecte : le sac est le contenant du joueur ; les lignes de ressources qui suivent
-	-- en sont le détail. La ligne passe en couleur d'alerte quand il ne reste plus de place.
-	local bagRow = gameplayRow("Bag", 2)
-	local bagText = Strings.format("Hud.Bag", { used = state.bagUsed, capacity = state.bagCapacity })
-	-- Le sac doit être en main pour ramasser (FR-019) comme pour être vidé au sol (FR-020) : la
-	-- ligne dit donc toujours dans quel état il est, et ne rappelle la touche que quand elle sert.
-	if not state.bagEquipped then
-		bagText ..= ` · {Strings.format("Hud.Bag.NotEquipped")}`
-	elseif state.bagUsed > 0 then
-		bagText ..= ` · {Strings.format("Hud.Bag.Drop")}`
-	end
-	bagRow.Text = bagText
-	local bagColor = if not state.bagEquipped
-		then Colors.Muted
-		elseif state.bagCapacity > 0 and state.bagUsed >= state.bagCapacity then Colors.Warn
+	local stageColor = if state.orderStatus == "Failed"
+		then Colors.Bad
+		elseif state.orderStatus == "Delivered" or state.orderStatus == "Prepared" then Colors.Good
 		else Colors.Text
-	bagRow.TextColor3 = bagColor
-	punchOnChange("Bag", bagRow, state.bagUsed, bagColor)
+	card.statusLabel.Text = Strings.format(`Hud.Order.Status.{state.orderStatus}`)
+	card.statusLabel.TextColor3 = stageColor
 
-	local essenceRow = gameplayRow("Essence", 3)
-	essenceRow.Text = `{Strings.format("Resource.Essence")} : {state.essence}`
-	punchOnChange("Essence", essenceRow, state.essence, Colors.Text)
-
-	local steakRow = gameplayRow("SuspectSteak", 4)
-	steakRow.Text = `{Strings.format("Resource.SuspectSteak")} : {state.suspectSteak}`
-	punchOnChange("SuspectSteak", steakRow, state.suspectSteak, Colors.Text)
-
-	local breadRow = gameplayRow("RoadBread", 5)
-	breadRow.Text = `{Strings.format("Resource.RoadBread")} : {state.roadBread}`
-	punchOnChange("RoadBread", breadRow, state.roadBread, Colors.Text)
-
-	local scrapRow = gameplayRow("Scrap", 6)
-	scrapRow.Text = `{Strings.format("Resource.Scrap")} : {state.scrap}`
-	punchOnChange("Scrap", scrapRow, state.scrap, Colors.Text)
-
-	local fuelRow = gameplayRow("Fuel", 7)
-	fuelRow.Text = `{Strings.format("Hud.Fuel")} : {math.floor(state.fuel)}/{math.floor(state.fuelCapacity)}`
-	local fuelColor = if state.safeZoneActive then Colors.Good else Colors.Bad
-	fuelRow.TextColor3 = fuelColor
-	punchOnRise("Fuel", fuelRow, state.fuel, fuelColor)
-
-	gameplayRow("SafeZone", 8).Text =
-		Strings.format(if state.safeZoneActive then "Hud.SafeZone.Active" else "Hud.SafeZone.Inactive")
-
-	local orderRow = gameplayRow("Order", 9)
-	if state.orderStatus == "" then
-		orderRow.Text = Strings.format("Hud.Order.None")
-	else
-		local recipe = GameplayStateClient.getOrderRecipe()
-		local recipeName = if recipe then Strings.format(recipe.NameKey) else state.orderRecipeId
-		orderRow.Text = Strings.format("Hud.Order.Active", {
-			recipe = recipeName,
-			status = Strings.format(`Hud.Order.Status.{state.orderStatus}`),
-		})
+	local cooking = state.orderStatus == "Preparing"
+	card.progressTrack.Visible = cooking
+	if cooking and card.cookingStartedAt then
+		local duration: number = Config.get("Kitchen", "PrepareDuration")
+		local ratio = if duration > 0 then math.clamp((os.clock() - card.cookingStartedAt) / duration, 0, 1) else 1
+		card.progressFill.Size = UDim2.fromScale(ratio, 1)
 	end
 
-	local ingredientsRow = gameplayRow("OrderIngredients", 10)
-	local recipe = if state.orderStatus == "" then nil else GameplayStateClient.getOrderRecipe()
-	if recipe == nil then
-		ingredientsRow.Text = ""
-	else
+	if recipe then
 		local parts = {}
 		for resource, amount in recipe.Ingredients do
 			table.insert(parts, `{amount}× {Strings.format(`Resource.{resource}`)}`)
 		end
-		ingredientsRow.Text = table.concat(parts, ", ")
-	end
-	-- Une ligne vide garderait sa hauteur dans la liste : on la masque.
-	ingredientsRow.Visible = ingredientsRow.Text ~= ""
-
-	-- Bus (003-bus-evasion, FR-006) : visible dès le premier dépôt ou dès l'Évasion en cours.
-	local busRow = gameplayRow("Bus", 11)
-	local matchPhase = MatchStateClient.get().phase
-	local showBus = state.busDeposited > 0 or state.busRequired > 0 and matchPhase == "Escape"
-	if state.busRepaired then
-		busRow.Text = Strings.format("Hud.Bus.Repaired")
-		busRow.TextColor3 = Colors.Good
+		card.ingredientsLabel.Text = table.concat(parts, ", ")
 	else
-		busRow.Text =
-			Strings.format("Hud.Bus.Progress", { deposited = state.busDeposited, required = state.busRequired })
-		busRow.TextColor3 = Colors.Text
+		card.ingredientsLabel.Text = ""
 	end
-	punchOnChange("BusDeposited", busRow, state.busDeposited, if state.busRepaired then Colors.Good else Colors.Text)
-	busRow.Visible = showBus or state.busRepaired
+end
+
+local function refreshOrders()
+	local state = GameplayStateClient.get()
+	if state.orderStatus == "" then
+		if activeOrderKey then
+			finalizedKeys[activeOrderKey] = nil
+			removeOrderCard(activeOrderKey)
+			activeOrderKey = nil
+		end
+		return
+	end
+
+	if activeOrderKey == nil then
+		orderSeq += 1
+		activeOrderKey = `Order{orderSeq}`
+	end
+	local key = activeOrderKey :: string
+	if finalizedKeys[key] then
+		return -- déjà livrée/ratée et déjà retirée : rien à refaire tant que le serveur ne revient
+		-- pas à "" (voir le commentaire sur activeOrderKey plus haut).
+	end
+
+	local card = orderCards[key]
+	if card == nil then
+		card = buildOrderCard(orderSeq)
+		orderCards[key] = card
+	end
+	updateOrderCard(card, state)
+
+	if state.orderStatus == "Delivered" or state.orderStatus == "Failed" then
+		finalizedKeys[key] = true
+		task.delay(Config.get("Ui", "OrderCardLinger"), function()
+			removeOrderCard(key)
+		end)
+	end
 end
 
 -- Fil de notifications (en bas à gauche) ---------------------------------------------------
@@ -445,8 +499,10 @@ for _, player in Players:GetPlayers() do
 end
 rebuildTeam(nil)
 
-GameplayStateClient.Changed:Connect(refreshGameplay)
-refreshGameplay()
+GameplayStateClient.Changed:Connect(refreshHealth)
+GameplayStateClient.Changed:Connect(refreshOrders)
+refreshHealth()
+refreshOrders()
 
 MatchStateClient.Changed:Connect(refreshTop)
 local elapsed = 0
@@ -455,6 +511,9 @@ RunService.Heartbeat:Connect(function(dt: number)
 	if elapsed >= REFRESH_INTERVAL then
 		elapsed = 0
 		refreshTop()
+		-- Anime la barre de progression pendant la cuisson : pas d'événement Changed dédié, donc
+		-- un rafraîchissement périodique est nécessaire pour que la barre avance visuellement.
+		refreshOrders()
 	end
 end)
 refreshTop()

@@ -6,14 +6,19 @@ local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local Shared = ReplicatedStorage.Shared
+local Config = require(Shared.Config)
 local Log = require(Shared.Util.Log)
 local RefPoints = require(Shared.World.RefPoints)
 local Layout = require(script.Parent.Parent.World.Layout)
 local VisualService = require(script.Parent.VisualService)
 
-local BELL_ID = "CounterBell"
-local BELL_COLOR = Color3.fromRGB(230, 190, 70)
 local SPAWN_COLOR = Color3.fromRGB(236, 220, 120)
+
+-- Décor statique, planté une seule fois au démarrage du serveur : une seed fixe suffit (rien à
+-- rejouer d'une partie à l'autre, contrairement à la forêt), mais jamais math.random pour autant
+-- (principe V) — un Random.new dédié, comme partout ailleurs dans le projet.
+local TREE_SEED = 271828
+local TREE_PLACEMENT_ATTEMPTS = 20
 
 local log = Log.new("World")
 
@@ -49,19 +54,68 @@ local function buildRefPoint(id: string, spec: Layout.RefPointSpec, parent: Inst
 	part.CanCollide = false
 	part.CanTouch = false
 	part.CanQuery = false
-	if id == BELL_ID then
-		part.Shape = Enum.PartType.Ball
-		part.Material = Enum.Material.Metal
-		part.Color = BELL_COLOR
-	else
-		part.Transparency = 1
-		part.CastShadow = false
-	end
+	part.Transparency = 1
+	part.CastShadow = false
 	part.Size = spec.size or Vector3.one
 	part.CFrame = spec.cframe
 	part:SetAttribute(RefPoints.Tag, id)
 	CollectionService:AddTag(part, RefPoints.Tag)
 	part.Parent = parent
+end
+
+-- Vrai si `position` n'est proche d'aucun point de référence déjà construit — évite qu'un arbre
+-- pousse à travers un poste ou un décor existant (Bus, enseigne néon…). Les points de référence
+-- proches du centre (comptoir, générateur…) sont de toute façon hors de portée des arbres,
+-- Forest.AreaMinRadius/World.TreeMinRadius les excluant déjà par construction.
+local function isClearOfRefPoints(position: Vector3, refFolder: Folder, exclusionRadius: number): boolean
+	for _, refPart in refFolder:GetChildren() do
+		if refPart:IsA("BasePart") then
+			local flat = Vector3.new(refPart.Position.X, position.Y, refPart.Position.Z)
+			if (position - flat).Magnitude < exclusionRadius then
+				return false
+			end
+		end
+	end
+	return true
+end
+
+-- Plante le décor d'arbres autour du restaurant (recherche « décor du monde »). Construit une
+-- seule fois au démarrage du serveur, jamais régénéré par partie : c'est de l'habillage, pas du
+-- gameplay, donc aucune raison de le lier à la seed de la partie (contrairement à la forêt).
+local function buildTrees(refFolder: Folder, world: Folder)
+	local count: number = Config.get("World", "TreeCount")
+	if count <= 0 then
+		return
+	end
+	local minRadius: number = Config.get("World", "TreeMinRadius")
+	local maxRadius: number = Config.get("World", "TreeMaxRadius")
+	local exclusionRadius: number = Config.get("World", "TreeExclusionRadius")
+	local rng = Random.new(TREE_SEED)
+
+	local folder = Instance.new("Folder")
+	folder.Name = "Trees"
+
+	local planted = 0
+	for index = 1, count do
+		for _attempt = 1, TREE_PLACEMENT_ATTEMPTS do
+			local angle = rng:NextNumber(0, 2 * math.pi)
+			local radius = rng:NextNumber(minRadius, maxRadius)
+			local position = Vector3.new(math.cos(angle) * radius, 0, math.sin(angle) * radius)
+			if isClearOfRefPoints(position, refFolder, exclusionRadius) then
+				local model = VisualService.build("Tree")
+				if model ~= nil then
+					VisualService.placeOnGround(model, position, rng:NextNumber(0, 2 * math.pi))
+					model.Name = `Tree_{index}`
+					model.Parent = folder
+					planted += 1
+				end
+				break
+			end
+		end
+	end
+
+	folder.Parent = world
+	log:info("Décor : %d arbre(s) planté(s)", planted)
 end
 
 function WorldService.Init()
@@ -93,6 +147,8 @@ function WorldService.Init()
 			log:error("Point de référence inconnu dans Layout.luau : %s", id)
 		end
 	end
+
+	buildTrees(refFolder, world)
 
 	local spawnSpec = Layout.RefPoints.Spawn
 	if spawnSpec ~= nil then

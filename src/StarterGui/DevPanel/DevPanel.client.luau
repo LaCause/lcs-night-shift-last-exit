@@ -173,18 +173,22 @@ end
 
 local pending: Pending? = nil
 
-local function distanceToBell(): number?
+-- RefuelGenerator sert de cible de référence pour cette liste de contrôle : comme les autres cas
+-- ci-dessous, ces envois échouent tous avant que le pipeline n'invoque le gestionnaire (BadEnvelope/
+-- BadPayload/TargetMissing/TooFar/WrongPhase sont tous rejetés en amont), donc jamais de carburant
+-- réellement ajouté au générateur par ces tests.
+local function distanceToGenerator(): number?
 	local character = Players.LocalPlayer.Character
 	local rootPart = if character then character:FindFirstChild("HumanoidRootPart") else nil
-	local bell = RefPoints.find("CounterBell")
-	if rootPart == nil or bell == nil or not rootPart:IsA("BasePart") then
+	local generator = RefPoints.find("Generator")
+	if rootPart == nil or generator == nil or not rootPart:IsA("BasePart") then
 		return nil
 	end
-	return (rootPart.Position - bell.Position).Magnitude
+	return (rootPart.Position - generator.Position).Magnitude
 end
 
-local function ringBell(remote: RemoteEvent)
-	remote:FireServer("RingBell", { target = "CounterBell" })
+local function refuelGenerator(remote: RemoteEvent)
+	remote:FireServer("RefuelGenerator", { target = "Generator" })
 end
 
 local function buildCases(): ({ Case }, { string })
@@ -213,7 +217,7 @@ local function buildCases(): ({ Case }, { string })
 			label = "payload non-table",
 			expected = "BadEnvelope",
 			send = function(remote)
-				remote:FireServer("RingBell", "x")
+				remote:FireServer("RefuelGenerator", "x")
 			end,
 		},
 		{
@@ -221,7 +225,7 @@ local function buildCases(): ({ Case }, { string })
 			label = "clé inconnue",
 			expected = "BadPayload",
 			send = function(remote)
-				remote:FireServer("RingBell", { target = "CounterBell", extra = 1 })
+				remote:FireServer("RefuelGenerator", { target = "Generator", extra = 1 })
 			end,
 		},
 		{
@@ -229,7 +233,7 @@ local function buildCases(): ({ Case }, { string })
 			label = "chaîne trop longue",
 			expected = "BadPayload",
 			send = function(remote)
-				remote:FireServer("RingBell", { target = string.rep("a", 500) })
+				remote:FireServer("RefuelGenerator", { target = string.rep("a", 500) })
 			end,
 		},
 		{
@@ -248,22 +252,22 @@ local function buildCases(): ({ Case }, { string })
 			label = "cible inexistante",
 			expected = "TargetMissing",
 			send = function(remote)
-				remote:FireServer("RingBell", { target = "Nowhere" })
+				remote:FireServer("RefuelGenerator", { target = "Nowhere" })
 			end,
 		})
-		local range = Config.get("Bell", "Range") + Config.get("Net", "DistanceTolerance")
-		local distance = distanceToBell()
+		local range = Config.get("Generator", "InteractRange") + Config.get("Net", "DistanceTolerance")
+		local distance = distanceToGenerator()
 		if distance ~= nil and distance > range then
-			table.insert(cases, { number = 8, label = "trop loin", expected = "TooFar", send = ringBell })
+			table.insert(cases, { number = 8, label = "trop loin", expected = "TooFar", send = refuelGenerator })
 		else
-			table.insert(notes, "Cas 8 ignoré : se placer au point d'apparition, hors de portée de la sonnette")
+			table.insert(notes, "Cas 8 ignoré : se placer au point d'apparition, hors de portée du générateur")
 		end
 	else
 		table.insert(notes, "Cas 7 et 8 : à lancer pendant une phase de jeu")
 	end
 
 	if phase == "Ended" then
-		table.insert(cases, { number = 10, label = "phase interdite", expected = "WrongPhase", send = ringBell })
+		table.insert(cases, { number = 10, label = "phase interdite", expected = "WrongPhase", send = refuelGenerator })
 	else
 		table.insert(notes, "Cas 10 : à relancer pendant l'écran de fin")
 	end
