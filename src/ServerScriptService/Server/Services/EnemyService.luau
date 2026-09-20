@@ -136,6 +136,12 @@ local function pickTarget(from: Vector3): (Player?, BasePart?)
 	return best, bestRoot
 end
 
+-- 007-nuits-optionnelles-evasion : nombre de nuits jouées au-delà du seuil minimum (0 tant qu'il
+-- n'est pas dépassé, FR-011 — les nuits normales ne sont donc jamais affectées).
+local function extraNights(): number
+	return math.max(0, MatchService.getNight() - MatchService.getTotalNights())
+end
+
 local function tryDamage(target: Player)
 	local now = os.clock()
 	local cooldown: number = Config.get("Enemy", "ContactCooldown")
@@ -144,6 +150,7 @@ local function tryDamage(target: Player)
 	end
 	lastContactAt[target] = now
 	local damage: number = Config.get("Enemy", "ContactDamage")
+		+ Config.get("Enemy", "ExtraNightDamageGrowth") * extraNights()
 	HealthService.damage(target, damage)
 	NotifyService.send(target, "EnemyHit", { damage = damage })
 end
@@ -167,6 +174,7 @@ local function moveToward(current: Vector3, target: Vector3, dt: number): Vector
 		return current
 	end
 	local speed: number = Config.get("Enemy", "MoveSpeed")
+		+ Config.get("Enemy", "ExtraNightSpeedGrowth") * extraNights()
 	local step = math.min(distance, speed * dt)
 	return current + delta.Unit * step
 end

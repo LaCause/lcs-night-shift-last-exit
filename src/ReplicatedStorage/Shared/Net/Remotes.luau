@@ -67,6 +67,13 @@ local intents: { [string]: IntentDecl } = {
 		phases = { "Escape" },
 		target = { field = "target", rangeSetting = "Bus.DepartureRange" },
 	},
+	-- 007-nuits-optionnelles-evasion : même déclaration que DepartBus (schéma, phase, portée) —
+	-- les deux options du même choix, disponibles exactement dans les mêmes conditions.
+	PushNight = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = { "Escape" },
+		target = { field = "target", rangeSetting = "Bus.DepartureRange" },
+	},
 
 	-- 004-sac-collecte (contracts/network.md). Ces deux intentions visent la même cible qu'un
 	-- ramassage (un nœud de forêt) : elles réutilisent le résolveur dynamique existant

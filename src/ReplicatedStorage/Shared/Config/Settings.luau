@@ -149,6 +149,11 @@ return {
 		GiveUpDelay = { value = 12, default = 12, min = 1, max = 120, test = 5 },
 		-- Durée de vie maximale avant disparition, en secondes.
 		MaxLifetime = { value = 90, default = 90, min = 5, max = 600, test = 20 },
+		-- 007-nuits-optionnelles-evasion : dégâts de contact ajoutés par nuit au-delà du seuil
+		-- minimum (contracts/config.md).
+		ExtraNightDamageGrowth = { value = 5, default = 5, min = 0, max = 50 },
+		-- Vitesse de déplacement ajoutée par nuit au-delà du seuil minimum, en studs/s.
+		ExtraNightSpeedGrowth = { value = 1, default = 1, min = 0, max = 10 },
 	},
 
 	-- 003-bus-evasion : réparation du bus et départ.

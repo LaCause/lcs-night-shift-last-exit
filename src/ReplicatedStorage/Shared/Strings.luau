@@ -108,6 +108,11 @@ local TEXTS: { [string]: string } = {
 	-- 006-monnaie-jetons-fidelite : monnaie persistante
 	["Hud.Currency"] = "Jetons fidélité",
 
+	-- 007-nuits-optionnelles-evasion : choix partir/rester au bus (le statut "Bus réparé — en
+	-- route !" existant sert déjà de titre, inutile d'en dupliquer un)
+	["Hud.Escape.Depart"] = "Partir maintenant (+{amount} jetons)",
+	["Hud.Escape.Stay"] = "Rester une nuit (+{amount} jetons)",
+
 	-- Panneau de développement, ajouts 002-premier-increment-jouable
 	["Dev.GiveResources"] = "Ressources +1",
 	["Dev.OrderDeliver"] = "Commande réussie",
@@ -120,6 +125,9 @@ local TEXTS: { [string]: string } = {
 	["Bus.RepairObject"] = "Bus à réparer",
 	["Bus.DepartAction"] = "Partir",
 	["Bus.DepartObject"] = "Bus réparé",
+	-- 007-nuits-optionnelles-evasion : prompt "rester une nuit de plus"
+	["Bus.StayAction"] = "Rester",
+	["Bus.StayObject"] = "Une nuit de plus ?",
 	["Notify.ScrapDeposited"] = "Ferraille déposée : {amount}.",
 	["Notify.BusRepaired"] = "Le bus est réparé. La sortie est possible.",
 	["Hud.Bus.Progress"] = "Bus : {deposited} / {required} ferraille",
