@@ -105,6 +105,9 @@ local TEXTS: { [string]: string } = {
 	["Notify.EnemyHit"] = "Une présence vous a touché dans le noir.",
 	["Hud.Health"] = "Santé",
 
+	-- 006-monnaie-jetons-fidelite : monnaie persistante
+	["Hud.Currency"] = "Jetons fidélité",
+
 	-- Panneau de développement, ajouts 002-premier-increment-jouable
 	["Dev.GiveResources"] = "Ressources +1",
 	["Dev.OrderDeliver"] = "Commande réussie",

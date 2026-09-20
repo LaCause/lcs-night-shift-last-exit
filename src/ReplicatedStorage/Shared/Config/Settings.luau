@@ -199,4 +199,19 @@ return {
 		DayFogEnd = { value = 100000, default = 100000, min = 100, max = 100000, kind = "integer" },
 		NightFogEnd = { value = 220, default = 220, min = 20, max = 2000, kind = "integer" },
 	},
+
+	-- 006-monnaie-jetons-fidelite : monnaie persistante, gain par nuit et bonus d'évasion.
+	Currency = {
+		-- Gain crédité pour la première nuit terminée.
+		NightlyBase = { value = 10, default = 10, min = 1, max = 500 },
+		-- Montant ajouté au gain à chaque nuit supplémentaire (doit rester > 0 : garantit la
+		-- croissance stricte exigée, SC-002).
+		NightlyGrowth = { value = 5, default = 5, min = 0, max = 200 },
+		-- Bonus versé par nuit survécue, au moment d'une évasion réussie.
+		EscapeBonusPerNight = { value = 25, default = 25, min = 1, max = 1000 },
+		-- Nombre de tentatives avant d'abandonner un chargement ou une écriture en échec.
+		SaveRetryAttempts = { value = 3, default = 3, min = 1, max = 10, kind = "integer" },
+		-- Délai entre deux tentatives, en secondes.
+		SaveRetryDelay = { value = 2, default = 2, min = 0.5, max = 30 },
+	},
 }

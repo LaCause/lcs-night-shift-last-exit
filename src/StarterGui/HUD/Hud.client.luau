@@ -163,6 +163,11 @@ UiKit.corner(healthFill, 6)
 local healthText = panelRow(healthPanel, "Text", "")
 healthText.LayoutOrder = 2
 
+-- 006-monnaie-jetons-fidelite : même colonne que la Vie, toujours visible (principe VII,
+-- « ressources du joueur »). Une simple ligne suffit — pas de barre, le solde n'a pas de plafond.
+local currencyText = panelRow(healthPanel, "Currency", "")
+currencyText.LayoutOrder = 3
+
 local previousHealth: number? = nil
 
 local function refreshHealth()
@@ -172,6 +177,7 @@ local function refreshHealth()
 	healthFill.Size = UDim2.fromScale(ratio, 1)
 	healthFill.BackgroundColor3 = steady
 	healthText.Text = `{math.floor(state.health)} / {math.floor(state.maxHealth)}`
+	currencyText.Text = `{Strings.format("Hud.Currency")} : {state.currency}`
 
 	if previousHealth ~= nil and state.health ~= previousHealth then
 		local accent = if state.health > previousHealth then Colors.Good else Colors.Bad

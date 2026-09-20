@@ -41,6 +41,8 @@ export type State = {
 	bagUsed: number,
 	-- Sac en main ou rangé : conditionne le ramassage et le vidage au sol (FR-019, FR-020).
 	bagEquipped: boolean,
+	-- Monnaie persistante (CurrencyService, attribut sur Player, 006-monnaie-jetons-fidelite).
+	currency: number,
 }
 
 local WAIT_TIMEOUT = 30
@@ -99,6 +101,7 @@ function GameplayStateClient.get(): State
 		busDeposited = readAttr(busFolder, "Deposited", 0),
 		busRequired = readAttr(busFolder, "Required", 0),
 		busRepaired = readAttr(busFolder, "Repaired", false),
+		currency = readAttr(player, "Currency", 0),
 	}
 end
 
