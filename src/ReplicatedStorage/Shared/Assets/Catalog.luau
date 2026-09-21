@@ -197,6 +197,19 @@ local function buildRestaurant(): Model
 		material = Enum.Material.Metal,
 	})
 	block(model, "FryerOil", Vector3.new(3, 0.2, 2), CFrame.new(-6, FLOOR_TOP + 3.6, 6), COLORS.Oil)
+
+	-- Établi (009-craft-etabli, research R1) : nouveau poste, à l'est du plan de travail, assez de
+	-- pièces de plus dans ce modèle déjà construit — même patron que Worktop/Fryer ci-dessus.
+	block(model, "WorkbenchBody", Vector3.new(4, 3, 3), CFrame.new(13, FLOOR_TOP + 1.5, 6), COLORS.DarkSteel, {
+		material = Enum.Material.Metal,
+	})
+	block(model, "WorkbenchTop", Vector3.new(4.2, 0.2, 3.2), CFrame.new(13, FLOOR_TOP + 3.1, 6), COLORS.Counter, {
+		material = Enum.Material.Wood,
+	})
+	block(model, "WorkbenchToolbox", Vector3.new(1.2, 0.6, 1), CFrame.new(13.8, FLOOR_TOP + 3.5, 5.6), COLORS.Warning, {
+		material = Enum.Material.Metal,
+	})
+
 	block(model, "MenuBoard", Vector3.new(14, 3, 0.4), CFrame.new(0, 10, 13), COLORS.Roof)
 	for _, y in { 8.4, 11.6 } do
 		block(model, "MenuNeon", Vector3.new(14.4, 0.3, 0.2), CFrame.new(0, y, 12.8), COLORS.NeonCyan, {

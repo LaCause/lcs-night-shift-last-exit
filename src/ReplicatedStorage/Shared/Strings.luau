@@ -176,6 +176,18 @@ local TEXTS: { [string]: string } = {
 	["Boutique.Item.BiggerBag.Desc"] = "Commencez chaque partie avec un sac de plus grande contenance.",
 	-- Nom du Tool du sac agrandi (BagService, même patron que Bag.LittleBag).
 	["Bag.MediumBag"] = "Grand sac",
+
+	-- 009-craft-etabli : fabrication à l'établi.
+	["Craft.Title"] = "ÉTABLI",
+	["Craft.InteractAction"] = "Fabriquer",
+	["Craft.InteractObject"] = "Établi",
+	["Craft.Make"] = "Fabriquer",
+	["Craft.NoBenefit"] = "Sans effet",
+	["Craft.InsufficientResources"] = "Ressources insuffisantes",
+	["Craft.Recipe.HealKit"] = "Trousse de soins de fortune",
+	["Craft.Recipe.HealKit.Desc"] = "Restaure {amount} points de santé.",
+	["Craft.Recipe.FuelCanister"] = "Bidon de carburant de secours",
+	["Craft.Recipe.FuelCanister.Desc"] = "Ajoute {amount} au carburant du générateur.",
 }
 
 local warned: { [string]: boolean } = {}

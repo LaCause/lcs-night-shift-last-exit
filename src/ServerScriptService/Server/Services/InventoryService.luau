@@ -235,6 +235,29 @@ function InventoryService.consumeStock(requirements: { [string]: number })
 	end
 end
 
+-- Miroir exact de hasStock/consumeStock ci-dessus, mais sur l'inventaire personnel plutôt que le
+-- stock partagé (009-craft-etabli, research R3) : aucune vérification/déduction multi-ressources
+-- atomique n'existait pour l'inventaire personnel avant cet incrément.
+function InventoryService.hasPersonal(player: Player, requirements: { [string]: number }): boolean
+	for resourceType, amount in requirements do
+		if getNumber(player, attributeKey(resourceType :: ResourceType)) < amount then
+			return false
+		end
+	end
+	return true
+end
+
+-- À appeler seulement après que hasPersonal a confirmé la disponibilité (pas de vérification
+-- redondante). Appelle removeFromOrder pour chaque ressource déduite, comme depositResource
+-- déjà : maintient l'invariant #order[player] == somme(Inv_*) documenté en tête de ce module.
+function InventoryService.consumePersonal(player: Player, requirements: { [string]: number })
+	for resourceType, amount in requirements do
+		local key = attributeKey(resourceType :: ResourceType)
+		player:SetAttribute(key, getNumber(player, key) - amount)
+		removeFromOrder(player, resourceType :: ResourceType, amount)
+	end
+end
+
 local function resetAll()
 	for _, player in Players:GetPlayers() do
 		initPlayer(player)

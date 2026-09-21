@@ -231,4 +231,15 @@ return {
 		-- Délai entre deux tentatives, en secondes.
 		SaveRetryDelay = { value = 2, default = 2, min = 0.5, max = 30 },
 	},
+
+	-- 009-craft-etabli : fabrication à l'établi (contracts/config.md). Les recettes elles-mêmes
+	-- (ingrédients, identifiants) vivent dans Craft/Recipes.luau, pas ici (research R2).
+	Craft = {
+		-- Portée pour fabriquer à l'établi, en studs (même échelle que Bus/Generator.InteractRange).
+		InteractRange = { value = 8, default = 8, min = 4, max = 20 },
+		-- Santé restaurée par la trousse de soins (HealKit).
+		HealAmount = { value = 30, default = 30, min = 1, max = 500, kind = "integer" },
+		-- Carburant ajouté au générateur par le bidon de secours (FuelCanister).
+		FuelAmount = { value = 25, default = 25, min = 1, max = 1000, kind = "integer" },
+	},
 }

@@ -173,6 +173,18 @@ local intents: { [string]: IntentDecl } = {
 	SetActiveCosmetic = {
 		schema = Validate.object({ itemId = Validate.string(maxString) }),
 	},
+
+	-- 009-craft-etabli (contracts/server-api.md, research R2/R6) : fabrication à l'établi, une
+	-- cible fixe unique comme RepairBus/RefuelGenerator — le gestionnaire vérifie l'identifiant
+	-- exact en défense en profondeur ; recipeId reste de la responsabilité du gestionnaire.
+	CraftItem = {
+		schema = Validate.object({
+			recipeId = Validate.string(maxString),
+			target = Validate.string(maxString),
+		}),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Craft.InteractRange" },
+	},
 }
 
 local Remotes = {

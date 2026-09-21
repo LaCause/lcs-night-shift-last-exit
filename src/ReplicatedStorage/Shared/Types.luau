@@ -53,6 +53,10 @@ export type RejectCode =
 	| "AlreadyOwned"
 	| "InsufficientFunds"
 	| "NotOwned"
+	-- Ajoutés par 009-craft-etabli (contracts/server-api.md).
+	| "RecipeUnknown"
+	| "InsufficientResources"
+	| "NoBenefit"
 
 export type RefPointId =
 	"Spawn"
@@ -67,6 +71,8 @@ export type RefPointId =
 	| "BusSpot"
 	-- Ajouté par 002-premier-increment-jouable (research R10).
 	| "EnemySpawn"
+	-- Ajouté par 009-craft-etabli (research R1) : nouveau lieu, pas un point orphelin recyclé.
+	| "Workbench"
 
 -- Contrat de système chargé par Shared/Util/Loader (serveur : Services/, client : Controllers/).
 export type System = {

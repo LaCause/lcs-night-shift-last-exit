@@ -25,6 +25,10 @@ local refPoints: { [string]: RefPointSpec } = {
 	Counter = { cframe = CFrame.new(0, 4.8, -6) },
 	Worktop = { cframe = CFrame.new(6, 4.5, 6) },
 	Fryer = { cframe = CFrame.new(-6, 5, 6) },
+	-- 009-craft-etabli (research R1) : nouveau poste de cuisine, à l'est du plan de travail, assez
+	-- loin du mur est (x = 19.5) pour ne pas s'y enfoncer. Coordonnées hand-matchées à la géométrie
+	-- ajoutée dans Assets/Catalog.luau (WorkbenchBody/WorkbenchTop), même convention que Worktop/Fryer.
+	Workbench = { cframe = CFrame.new(13, 4.5, 6) },
 	-- Devant le générateur (GeneratorBody dans Catalog.luau, centré en (-14, 2.4, 18) sur la
 	-- dalle GeneratorPad) : au bord sud de la dalle, pas dans le volume solide du décor.
 	Generator = { cframe = CFrame.new(-14, 1, 21.5) },
