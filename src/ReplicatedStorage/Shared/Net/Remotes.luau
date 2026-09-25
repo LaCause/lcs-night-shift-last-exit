@@ -174,9 +174,32 @@ local intents: { [string]: IntentDecl } = {
 		schema = Validate.object({ itemId = Validate.string(maxString) }),
 	},
 
-	-- 009-craft-etabli (contracts/server-api.md, research R2/R6) : fabrication à l'établi, une
-	-- cible fixe unique comme RepairBus/RefuelGenerator — le gestionnaire vérifie l'identifiant
-	-- exact en défense en profondeur ; recipeId reste de la responsabilité du gestionnaire.
+	-- 009-craft-etabli (contracts/server-api.md, research R2/R6) : fabrication à l'établi en deux
+	-- phases — choisir la recette (SelectCraftRecipe), déposer ses ingrédients (touche G ou objet
+	-- glissé sur l'établi, sans intention dédiée : DropBag/DropOneItem/ReleaseItem s'en chargent),
+	-- puis fabriquer (CraftItem). Une cible fixe unique comme RepairBus/RefuelGenerator — le
+	-- gestionnaire vérifie l'identifiant exact en défense en profondeur ; recipeId reste de la
+	-- responsabilité du gestionnaire.
+	SelectCraftRecipe = {
+		schema = Validate.object({
+			recipeId = Validate.string(maxString),
+			target = Validate.string(maxString),
+		}),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Craft.InteractRange" },
+	},
+	-- Abandonne la recette en cours : les ingrédients déjà posés retournent dans le sac.
+	CancelCraft = {
+		schema = Validate.object({ target = Validate.string(maxString) }),
+		phases = PLAYABLE,
+		target = { field = "target", rangeSetting = "Craft.InteractRange" },
+	},
+	-- Consomme une trousse de soins du sac (touche H). Ne vise rien, comme DropBag : le pipeline
+	-- saute ses étapes 7 à 9, c'est donc le gestionnaire (CraftService) qui vérifie le joueur vivant.
+	UseHealKit = {
+		schema = EMPTY,
+		phases = PLAYABLE,
+	},
 	CraftItem = {
 		schema = Validate.object({
 			recipeId = Validate.string(maxString),
@@ -226,6 +249,15 @@ local Remotes = {
 		-- Sac vidé au sol : confirme au joueur combien d'objets sont partis, le contenu du sac
 		-- tombant d'un coup à zéro sans autre trace à l'écran.
 		"BagDropped",
+		-- 009-craft-etabli : objet fabriqué (retour personnel), trousse consommée, trousse refusée
+		-- faute de bénéfice — le pipeline ne renvoie jamais ses refus au client.
+		"ItemCrafted",
+		"HealKitUsed",
+		"HealKitUseless",
+		-- 010-coin-stockage : rangement refusé, stock plein — même raison que BagFull : le
+		-- pipeline ne renvoie jamais ses refus au client. Aucune intention n'est ajoutée : le stock
+		-- réutilise les gestes existants (DropBag/DropOneItem, ReleaseItem, HarvestResource, GrabItem).
+		"StorageFull",
 	}),
 }
 

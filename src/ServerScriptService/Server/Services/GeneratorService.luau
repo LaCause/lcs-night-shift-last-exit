@@ -87,6 +87,21 @@ function GeneratorService.fuelRoom(): number
 	return Config.get("Generator", "Capacity") - fuel
 end
 
+-- Verse 1 bidon de carburant fabriqué à l'établi (009-craft-etabli) dans la réserve, avec le même
+-- contrat que le dépôt d'essence : rien n'est prélevé dans le sac tant que la réserve ne peut pas
+-- absorber au moins une part du bidon. Il ajoute Craft.FuelAmount, plafonné par la capacité (la
+-- part en trop est perdue, comme pour l'essence). Renvoie vrai si un bidon a été versé.
+function GeneratorService.depositCanister(player: Player): boolean
+	if GeneratorService.fuelRoom() <= 0 then
+		return false
+	end
+	if InventoryService.depositResource(player, "FuelCanister", 1) <= 0 then
+		return false
+	end
+	GeneratorService.deposit(Config.get("Craft", "FuelAmount"))
+	return true
+end
+
 function GeneratorService.hasFuel(): boolean
 	return fuel > 0
 end
@@ -174,17 +189,26 @@ function GeneratorService.Init()
 			local capacity: number = Config.get("Generator", "Capacity")
 			local room = capacity - fuel
 			local maxEssence = math.floor(room / fuelPerEssence)
-			if maxEssence <= 0 then
-				return nil -- déjà plein : aucune essence consommée, rien à faire
-			end
-			local used = InventoryService.depositResource(player, "Essence", maxEssence)
+			-- Déjà trop plein pour une part d'essence : aucune essence consommée. Les bidons
+			-- fabriqués restent essayés plus bas, ils se plafonnent d'eux-mêmes à la capacité.
+			local used = if maxEssence > 0 then InventoryService.depositResource(player, "Essence", maxEssence) else 0
 			if used > 0 then
 				GeneratorService.deposit(used * fuelPerEssence)
+				log:info("%s ravitaille le générateur : %d essence", player.Name, used)
+			end
+			-- Bidons fabriqués à l'établi (009-craft-etabli) : tant que la réserve n'est pas pleine.
+			local canisters = 0
+			while GeneratorService.depositCanister(player) do
+				canisters += 1
+			end
+			if canisters > 0 then
+				log:info("%s ravitaille le générateur : %d bidon(s)", player.Name, canisters)
+			end
+			if used > 0 or canisters > 0 then
 				-- Retour son/visuel léger côté client (SfxController) : distinct de
 				-- GeneratorRefueled/GeneratorEmpty, qui ne se déclenchent qu'au changement d'état
 				-- de la zone de sécurité, pas à chaque ravitaillement.
-				NotifyService.send(player, "GeneratorFueled", { amount = used })
-				log:info("%s ravitaille le générateur : %d essence", player.Name, used)
+				NotifyService.send(player, "GeneratorFueled", { amount = used + canisters })
 			end
 			return nil
 		end,

@@ -242,4 +242,24 @@ return {
 		-- Carburant ajouté au générateur par le bidon de secours (FuelCanister).
 		FuelAmount = { value = 25, default = 25, min = 1, max = 1000, kind = "integer" },
 	},
+
+	-- 010-coin-stockage : coin de stockage commun de l'arrière-salle (contracts/config.md). La
+	-- disposition des emplacements se déduit de ces réglages et du point de référence Storage, il
+	-- n'y a aucune liste de coordonnées à tenir à jour (research R3).
+	Storage = {
+		-- Nombre d'emplacements. Au-delà de 16, la grille sort de la zone marquée au sol (8 × 8).
+		Capacity = { value = 12, default = 12, min = 1, max = 16, kind = "integer" },
+		-- Colonnes de la grille au sol ; les rangées se déduisent : ceil(Capacity / Columns).
+		Columns = { value = 4, default = 4, min = 1, max = 8, kind = "integer" },
+		-- Distance entre deux emplacements voisins, en studs (contient le plus large visuel d'objet).
+		SlotSpacing = { value = 2, default = 2, min = 1.5, max = 4 },
+		-- Portée pour ranger ET reprendre, en studs, mesurée horizontalement depuis le point de
+		-- référence Storage. Max 7 : au-delà, le pipeline réseau (Forest.HarvestRange + tolérance)
+		-- refuserait certaines reprises que le stockage accepterait (research R7).
+		InteractRange = { value = 6, default = 6, min = 3, max = 7 },
+		-- Délai minimal entre deux messages « stockage plein » pour un même joueur, en secondes.
+		FullNoticeCooldown = { value = 2, default = 2, min = 0, max = 10 },
+		-- Distance jusqu'à laquelle l'indicateur « Stockage n/N » reste visible, en studs.
+		IndicatorDistance = { value = 40, default = 40, min = 10, max = 100 },
+	},
 }

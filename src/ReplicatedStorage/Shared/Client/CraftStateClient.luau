@@ -1,8 +1,9 @@
 --!strict
--- Lecture côté client de la disponibilité des recettes d'établi (009-craft-etabli, data-model.md).
--- Même esprit que BoutiqueStateClient : `State` n'a pas de forme figée, calculée en parcourant
--- Craft/Recipes.luau à chaque appel, en croisant les attributs Inv_* déjà répliqués du joueur
--- local — aucune nouvelle donnée répliquée.
+-- Lecture côté client de l'état de l'établi (009-craft-etabli, data-model.md) : la recette choisie
+-- (attribut CraftRecipe) et les ingrédients déjà posés (attributs Craft_<Ressource>), tous écrits
+-- par CraftService. Même esprit que BoutiqueStateClient : `State` est calculé à chaque appel à
+-- partir des attributs déjà répliqués du joueur local — aucune donnée dupliquée, aucune autorité
+-- côté client.
 
 local Players = game:GetService("Players")
 
@@ -10,7 +11,12 @@ local Recipes = require(script.Parent.Parent.Craft.Recipes)
 local Signal = require(script.Parent.Parent.Util.Signal)
 
 export type State = {
-	recipes: { [string]: { available: boolean } },
+	-- Recette choisie à l'établi ; nil tant que le joueur est encore à la liste des recettes.
+	recipe: Recipes.Recipe?,
+	-- Unités posées sur l'établi, par ressource attendue par la recette choisie.
+	placed: { [string]: number },
+	-- Vrai quand chaque ingrédient de la recette choisie est posé en quantité suffisante.
+	complete: boolean,
 }
 
 local player = Players.LocalPlayer
@@ -19,24 +25,26 @@ local CraftStateClient = {
 	Changed = Signal.new("CraftStateClient.Changed") :: Signal.Signal<()>,
 }
 
-local function carried(resourceType: string): number
-	local value = player:GetAttribute(`Inv_{resourceType}`)
+local function numberAttribute(key: string): number
+	local value = player:GetAttribute(key)
 	return if typeof(value) == "number" then value else 0
 end
 
 function CraftStateClient.get(): State
-	local recipes: { [string]: { available: boolean } } = {}
-	for _, recipe in Recipes.All do
-		local available = true
-		for resourceType, amount in recipe.Ingredients do
-			if carried(resourceType) < amount then
-				available = false
-				break
+	local id = player:GetAttribute("CraftRecipe")
+	local recipe = if typeof(id) == "string" then Recipes.find(id) else nil
+	local placed: { [string]: number } = {}
+	local complete = recipe ~= nil
+	if recipe ~= nil then
+		for resourceType, required in recipe.Ingredients do
+			local count = numberAttribute(`Craft_{resourceType}`)
+			placed[resourceType] = count
+			if count < required then
+				complete = false
 			end
 		end
-		recipes[recipe.Id] = { available = available }
 	end
-	return { recipes = recipes }
+	return { recipe = recipe, placed = placed, complete = complete }
 end
 
 task.spawn(function()

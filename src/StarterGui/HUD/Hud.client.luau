@@ -50,6 +50,13 @@ local FEED_KINDS = {
 	-- jamais ses refus au client (research R10).
 	"BagFull",
 	"BagDropped",
+	-- 009-craft-etabli : objet fabriqué, trousse consommée, trousse refusée à santé pleine — même
+	-- raison que BagFull, le pipeline ne renvoie jamais ses refus au client.
+	"ItemCrafted",
+	"HealKitUsed",
+	"HealKitUseless",
+	-- 010-coin-stockage : rangement refusé, stock plein — même raison que BagFull.
+	"StorageFull",
 }
 local PHASE_COLORS: { [string]: Color3 } = {
 	Waiting = Colors.Muted,
@@ -176,6 +183,12 @@ healthText.LayoutOrder = 2
 local currencyText = panelRow(healthPanel, "Currency", "")
 currencyText.LayoutOrder = 3
 
+-- 009-craft-etabli : rappel de la touche pour se soigner, affiché seulement quand le sac contient
+-- une trousse (sinon la ligne disparaît et le panneau reprend sa hauteur).
+local healKitText = panelRow(healthPanel, "HealKit", "", Colors.Good)
+healKitText.LayoutOrder = 4
+healKitText.Visible = false
+
 local previousHealth: number? = nil
 
 local function refreshHealth()
@@ -186,6 +199,8 @@ local function refreshHealth()
 	healthFill.BackgroundColor3 = steady
 	healthText.Text = `{math.floor(state.health)} / {math.floor(state.maxHealth)}`
 	currencyText.Text = `{Strings.format("Hud.Currency")} : {state.currency}`
+	healKitText.Visible = state.healKit > 0
+	healKitText.Text = Strings.format("Hud.HealKit", { count = state.healKit })
 
 	if previousHealth ~= nil and state.health ~= previousHealth then
 		local accent = if state.health > previousHealth then Colors.Good else Colors.Bad

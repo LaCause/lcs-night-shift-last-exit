@@ -16,6 +16,34 @@
   disponibles ? → A: Un panneau à l'établi liste toutes les recettes connues, leur coût, et si le
   joueur a de quoi les fabriquer (même idiome que le panneau de la boutique, `008`).
 
+### Amendement 2026-09-25 — fabrication en deux phases
+
+- Demande : la fabrication se fait en deux temps. Première phase : on choisit la recette. Seconde
+  phase : un plan de travail affiche les ingrédients nécessaires, et le joueur doit les y déposer
+  lui-même, soit en les sortant du sac (touche **G** près de l'établi, ce qui les ajoute à la
+  recette), soit en glissant-déposant un objet directement sur l'établi.
+- Ce flux **remplace** le déclenchement en un clic de la version initiale : FR-001, FR-002 et
+  FR-009 sont précisés par FR-011 à FR-016 ci-dessous (un ingrédient posé sur l'établi quitte le
+  sac ; fabriquer consomme ce qui est posé, plus l'inventaire directement).
+- Décisions prises sans arbitrage explicite du demandeur, à confirmer : (a) le glisser-déposer est
+  celui des objets du monde déjà saisissables à la souris (`004`), pas un glisser depuis une
+  interface du sac, qui n'existe pas ; (b) changer de recette ou la quitter rend les ingrédients
+  posés au sac, et est refusé si le sac n'a pas la place (rien ne se perd) ; (c) l'établi est
+  personnel (un état par joueur), pas partagé entre coéquipiers.
+
+### Amendement 2026-09-25 (2) — la fabrication produit de vrais objets
+
+- Demande : créer un objet pour chacune des deux recettes ; la trousse de soins doit être
+  consommée par le joueur (elle ne soigne plus à la fabrication).
+- Fabriquer **ne soigne plus et ne ravitaille plus directement** : cela produit un objet
+  (`Recipe.Result` : `HealKit` ou `FuelCanister`) qui rejoint le sac. Ce remplacement d'effet
+  immédiat par un objet supplante les scénarios d'acceptation initiaux des User Stories 1 et 2
+  ci-dessous et FR-003 à FR-005 (le bénéfice est désormais obtenu à l'usage, voir FR-017 à
+  FR-021).
+- Décisions prises sans arbitrage explicite du demandeur, à confirmer : (a) la trousse s'utilise
+  avec la touche **H** ; (b) le bidon se verse au générateur, comme l'essence — touche G devant
+  lui, ou son invite de proximité ; (c) chaque objet fabriqué occupe une place du sac.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 - Fabriquer une trousse de soins de fortune (Priority: P1)
@@ -119,6 +147,41 @@ immédiatement du montant prévu, et les ressources sont déduites du sac du jou
 - **FR-010**: Aucune fabrication NE DOIT dépendre d'une validation côté client : le serveur seul
   décide qu'un joueur possède assez de ressources, et seul lui accorde l'effet (santé, carburant) —
   un client NE DOIT jamais pouvoir s'attribuer directement l'un de ces effets.
+- **FR-011** *(amendement 2026-09-25)*: Le système DOIT séparer la fabrication en deux phases : le
+  joueur choisit d'abord une recette, puis dépose ses ingrédients sur le plan de travail avant de
+  pouvoir fabriquer.
+- **FR-012**: Le plan de travail DOIT afficher, pour la recette choisie, chaque ingrédient requis
+  avec la quantité déjà posée et la quantité attendue, et refléter immédiatement chaque dépôt. Le
+  bouton de fabrication DOIT dire pourquoi il n'agit pas (ingrédients manquants) : le serveur
+  refuse en silence, un clic sans effet visible laisserait le joueur sans explication.
+- **FR-013**: Lorsqu'un joueur proche de l'établi lâche un objet de son sac avec la touche G, et
+  que sa recette attend encore cet objet, celui-ci DOIT être ajouté à la recette au lieu de tomber
+  au sol. Un objet que la recette n'attend pas (ou plus) garde le comportement habituel du lâcher.
+- **FR-014**: Un objet du monde relâché sur l'établi par glisser-déposer DOIT s'ajouter à la
+  recette si elle l'attend encore, et disparaître du monde ; sinon il reste où il a été posé.
+- **FR-015**: Un ingrédient posé sur l'établi DOIT quitter le sac (jamais présent aux deux
+  endroits), et la fabrication DOIT consommer uniquement ce qui est posé, une fois la recette
+  complète.
+- **FR-016**: Changer de recette ou la quitter DOIT rendre au sac tous les ingrédients posés, en
+  tout ou rien ; si le sac ne peut pas les reprendre, l'action DOIT être refusée sans rien
+  déplacer. Ce qui est posé et non fabriqué est perdu à l'élimination et à chaque nouvelle partie,
+  comme les ressources non déposées.
+
+- **FR-017** *(amendement 2026-09-25 (2))*: Fabriquer une recette DOIT consommer les ingrédients
+  posés sur l'établi et ajouter au sac du joueur un objet fabriqué (`HealKit`, `FuelCanister`), qui
+  occupe une place du sac comme n'importe quelle ressource. Sans place libre, la fabrication DOIT
+  être refusée sans rien consommer, et le joueur en être prévenu.
+- **FR-018**: Un objet fabriqué DOIT se porter, se lâcher au sol (avec un visuel propre) et se
+  ramasser comme une ressource ordinaire ; aucun nœud de forêt n'en génère jamais.
+- **FR-019**: Le joueur DOIT pouvoir consommer une trousse de soins de son sac (touche H) : elle
+  restaure la santé du montant configuré (`Craft.HealAmount`), sans dépasser le maximum, et
+  disparaît du sac. À santé déjà pleine, l'usage DOIT être refusé, la trousse rester dans le sac et
+  le joueur en être prévenu.
+- **FR-020**: Un bidon de carburant DOIT pouvoir être versé au générateur (touche G devant lui, ou
+  son invite de proximité) : il ajoute `Craft.FuelAmount` à la réserve, plafonné par sa capacité, et
+  disparaît du sac. Il n'est accepté que si la réserve peut en absorber au moins une part.
+- **FR-021**: Le nombre de trousses possédées DOIT être visible en permanence (rappel de la touche
+  d'usage) dès que le sac en contient une.
 
 ### Key Entities
 

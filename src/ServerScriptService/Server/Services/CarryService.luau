@@ -13,10 +13,12 @@ local Shared = ReplicatedStorage.Shared
 local Config = require(Shared.Config)
 local Log = require(Shared.Util.Log)
 local Types = require(Shared.Types)
+local CraftService = require(script.Parent.CraftService)
 local ForestService = require(script.Parent.ForestService)
 local MatchService = require(script.Parent.MatchService)
 local NetService = require(script.Parent.NetService)
 local SessionService = require(script.Parent.SessionService)
+local StorageService = require(script.Parent.StorageService)
 
 type PlayerStatus = Types.PlayerStatus
 type Carry = { part: BasePart, lastValidPosition: Vector3 }
@@ -135,6 +137,13 @@ function CarryService.Init()
 			if holder ~= nil and holder ~= player then
 				return "AlreadyCarried"
 			end
+			-- Objet rangé au stockage (010-coin-stockage, research R2) : hors de portée du coin, la
+			-- saisie est refusée ; à portée elle est permise et n'exige aucun sac (FR-018). Sans
+			-- crochet sur le nœud : nil, aucun changement pour un objet ordinaire.
+			local blocked = ForestService.checkTake(player, part)
+			if blocked ~= nil then
+				return blocked
+			end
 			-- Un joueur ne tient qu'un objet à la fois : le précédent est reposé proprement.
 			release(player, nil)
 			carries[player] = { part = part, lastValidPosition = part.Position }
@@ -143,6 +152,9 @@ function CarryService.Init()
 			pcall(function()
 				part:SetNetworkOwner(player)
 			end)
+			-- La saisie est acquise : un objet rangé libère son emplacement et redevient un objet du
+			-- monde ordinaire (no-op pour tout autre nœud).
+			ForestService.releaseHooks(part)
 			return nil
 		end,
 	})
@@ -160,6 +172,14 @@ function CarryService.Init()
 			local root = rootOf(player)
 			local accepted = root ~= nil and (requested - root.Position).Magnitude <= maxRange()
 			release(player, if accepted then requested else carry.lastValidPosition)
+			-- Glissé sur l'établi (009-craft-etabli) : si la recette choisie attend cet objet, il
+			-- quitte le monde pour rejoindre la recette. Sinon, glissé sur le coin de stockage
+			-- (010-coin-stockage) : il est rangé, figé, sur un emplacement libre. Si aucun des deux
+			-- ne le prend (hors de portée, stock plein), il reste simplement posé là. Les zones de
+			-- l'établi et du stockage sont disjointes : au plus un des deux peut le prendre.
+			if not CraftService.tryPlaceCarried(player, carry.part) then
+				StorageService.tryStoreCarried(player, carry.part)
+			end
 			return nil
 		end,
 	})

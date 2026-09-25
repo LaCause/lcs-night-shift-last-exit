@@ -34,8 +34,9 @@ local BAG_TYPES: { [string]: BagDef } = {
 }
 
 -- Ressources qui occupent de la place dans le sac : les mêmes compteurs que l'inventaire
--- personnel, dont le sac n'est que le plafond.
-local CARRIED_TYPES: { ResourceType } = { "Essence", "SuspectSteak", "RoadBread", "Scrap" }
+-- personnel, dont le sac n'est que le plafond. Les objets fabriqués (009-craft-etabli) en font
+-- partie : oublier l'un d'eux ici ferait mentir le remplissage du sac.
+local CARRIED_TYPES: { ResourceType } = { "Essence", "SuspectSteak", "RoadBread", "Scrap", "HealKit", "FuelCanister" }
 
 -- Longueur de la sonde verticale qui cherche le sol sous un objet lâché : constante de robustesse,
 -- pas un réglage d'équilibrage. Son repli est le plan y = 0, celui où la forêt pose ses nœuds.

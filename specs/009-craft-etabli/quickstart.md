@@ -5,7 +5,43 @@ une unité de chaque ressource par appel (Essence, SuspectSteak, RoadBread, Scra
 plusieurs fois pour atteindre les quantités des recettes (2 Essence + 1 Scrap pour `HealKit`, 3
 Essence pour `FuelCanister`).
 
-## Scénarios de validation
+## Amendement 2026-09-25 — flux en deux phases
+
+Les scénarios C1, C3 et C5 ci-dessous décrivent le flux initial en un clic. Depuis l'amendement
+(`spec.md`, FR-011 à FR-016), on choisit d'abord la recette, puis on dépose ses ingrédients sur
+l'établi avant de fabriquer. Scénarios à jouer à la place :
+
+- **C8 — Choisir puis déposer avec G** : à l'établi (sac équipé, 2 Essence + 1 Ferraille dans le
+  sac), ouvrir le panneau, choisir `HealKit`. **Attendu** : le plan de travail affiche `0 / 2`
+  Essence et `0 / 1` Ferraille, bouton « Ingrédients manquants ». Appuyer sur G près de l'établi
+  ramène ces compteurs à `2 / 2` et `1 / 1` (un objet par pression, le plus récent d'abord ; un
+  objet non attendu, un Steak par exemple, tombe au sol). Le bouton devient « Fabriquer ».
+- **C9 — Glisser-déposer** : lâcher une Ferraille au sol loin de l'établi (G), la saisir à la
+  souris et la relâcher sur l'établi. **Attendu** : elle disparaît du monde et le compteur
+  progresse ; relâchée alors que la recette n'en attend plus, elle reste posée sur l'établi.
+- **C10 — Fabriquer un objet** : recette complète → le bouton passe à « Fabriquer » (quelle que
+  soit la santé ou le carburant), l'établi est vidé, **un objet** (`Trousse de soins` /
+  `Bidon de carburant`) rejoint le sac, le HUD affiche « Fabriqué : … » et, pour la trousse, la
+  ligne `[H] Trousse de soins × N`. Aucun soin ni carburant n'est accordé à ce stade.
+- **C13 — Consommer la trousse (H)** : à santé pleine, H est refusé (`NoBenefit`), la trousse reste
+  dans le sac et « Santé déjà pleine : la trousse reste dans le sac » s'affiche. Blessé, H restaure
+  `Craft.HealAmount` sans dépasser le maximum, consomme la trousse et masque la ligne HUD si c'était
+  la dernière.
+- **C14 — Verser le bidon** : devant le générateur, G (ou l'invite de proximité) le verse : la
+  réserve augmente de `Craft.FuelAmount` (plafonnée), le bidon disparaît du sac. Réserve pleine,
+  il n'est pas prélevé.
+- **C15 — Sac plein** : établi complet et sac plein, fabriquer est refusé (`InventoryFull`, « Sac
+  plein » dans le fil) sans rien consommer ; il passe dès qu'une place se libère.
+- **C16 — Objets au sol** : lâcher (G) une trousse ou un bidon loin des postes la fait apparaître
+  au sol avec son visuel (trousse blanche à croix rouge, bidon jaune à bande cyan) ; F la
+  ramasse. *(Validé en jeu : fabrication au vrai clic, H au vrai clavier, G devant le générateur.)*
+- **C11 — Rendre au sac** : avec des ingrédients posés, changer de recette ou « Changer de
+  recette » les remet dans le sac ; si le sac est plein, l'action est refusée
+  (`InventoryFull`, notification « sac plein ») et rien ne bouge.
+- **C12 — Autorité serveur** : `CraftItem` sans recette choisie → `NoRecipeSelected` ; un client
+  ne peut ni écrire `CraftRecipe`/`Craft_*` ni fabriquer avec le contenu de son sac.
+
+## Scénarios de validation (flux initial en un clic)
 
 ### C1 — Fabriquer la trousse de soins (US1 ; FR-001, FR-002, FR-004, SC-001 à SC-003)
 

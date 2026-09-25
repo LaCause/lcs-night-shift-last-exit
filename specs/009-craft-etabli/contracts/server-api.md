@@ -10,11 +10,57 @@ Init}`). Un seul nouveau système ; deux systèmes existants gagnent une API add
 | 46 | HealthService | (existant, API additive) |
 | **53** | **CraftService** | **oui** |
 
+## Amendement 2026-09-25 — fabrication en deux phases
+
+Ce contrat est étendu ; là où il diverge du texte initial plus bas, **cet amendement fait foi**
+(voir `spec.md`, FR-011 à FR-016, et `data-model.md`).
+
+- **Deux nouvelles intentions** (`Remotes.luau`), même cible `Workbench` et même portée
+  `Craft.InteractRange` que `CraftItem`, mêmes phases jouables :
+  - `SelectCraftRecipe { recipeId: string, target: string }` — choisit la recette ; rend d'abord les
+    ingrédients déjà posés (refus `InventoryFull` si le sac ne peut pas tout reprendre) ;
+  - `CancelCraft { target: string }` — quitte la recette, ingrédients rendus au sac (même refus).
+- **`CraftItem` est modifiée** : elle exige que `recipeId` soit la recette choisie (sinon
+  `NoRecipeSelected`) et que les ingrédients soient **posés sur l'établi** (sinon
+  `InsufficientResources`), et non plus dans le sac. Elle **ajoute un objet au sac**
+  (`Recipe.Result`) au lieu d'appliquer un effet : `InventoryFull` (+ notification `BagFull`) si le
+  sac n'a pas de place, rien n'étant alors consommé. Le rejet `NoBenefit` n'existe plus à la
+  fabrication.
+- **Nouvelle intention `UseHealKit`** (aucun payload, aucune cible, phases jouables) : consomme une
+  trousse du sac et soigne de `Craft.HealAmount`. Refus : `NoCharacter`,
+  `InsufficientResources` (aucune trousse), `NoBenefit` (santé pleine, la trousse est gardée).
+- **Aucune intention pour déposer** : la touche G réutilise `DropBag`/`DropOneItem` (le pipeline de
+  `005` passe par `StationDepositService`), le glisser-déposer réutilise `ReleaseItem` (`004`).
+- **Nouveau code de rejet** : `NoRecipeSelected`.
+- **Nouvelles notifications** (`Remotes.NotificationKinds`, fil du HUD + son) : `ItemCrafted`,
+  `HealKitUsed`, `HealKitUseless`.
+- **API additive** :
+  - `CraftService.tryPlaceFromBag(player, resourceType): boolean` — appelée par
+    `StationDepositService.tryDeposit`, en premier (l'établi passe avant les postes fixes) ;
+  - `CraftService.tryPlaceCarried(player, part): boolean` — appelée par `CarryService` après un
+    `ReleaseItem` ;
+  - `InventoryService.canAddPersonal(player, amount): boolean` — le sac peut-il reprendre
+    `amount` unités ; `ForestService.consumeNode(part): ResourceType?` — sort du monde un nœud
+    disponible sans passer par le sac (`HarvestResource` en partage désormais la logique) ;
+  - `GeneratorService.depositCanister(player): boolean` — verse 1 bidon fabriqué dans la réserve
+    (`Craft.FuelAmount`, plafonné), sans rien prélever si elle est déjà pleine ; utilisée par
+    l'invite du générateur et par `StationDepositService` (entrée `FuelCanister`).
+- **Dépendances** : `CraftService` requiert en plus `ForestService`, `MatchService`,
+  `NotifyService`, `SessionService` (et plus `GeneratorService` : le bidon se verse côté
+  générateur) ; `StationDepositService` et `CarryService` requièrent
+  `CraftService`. Le graphe reste acyclique (aucun de ces modules ne requiert `StationDepositService`,
+  `CarryService` ni `BagService`).
+- **Client** : `CraftPanelController` affiche deux vues (liste des recettes, puis plan de travail
+  de la recette choisie) selon `CraftStateClient`, et n'envoie que `SelectCraftRecipe`,
+  `CancelCraft` et `CraftItem`. Nouveau `HealKitController` : la touche H envoie `UseHealKit` quand
+  le sac contient une trousse ; le HUD affiche le rappel `[H] Trousse de soins × N`.
+
 ## Nouvelle API : CraftService
 
 Aucune fonction publique au-delà du contrat de système : la fabrication passe exclusivement par
 l'intention réseau ci-dessous (principe III — aucun appel direct depuis un autre service ne doit
-déclencher un effet de craft).
+déclencher un effet de craft). *(Version initiale ; voir l'amendement ci-dessus pour les deux
+fonctions de dépôt.)*
 
 ## Modification : InventoryService (additive, research R3)
 

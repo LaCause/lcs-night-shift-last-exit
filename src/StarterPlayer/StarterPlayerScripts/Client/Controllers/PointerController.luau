@@ -156,7 +156,11 @@ local function showHint(part: BasePart?)
 		label.Text = Strings.format("Pointer.BagFull")
 	else
 		local resourceType = part:GetAttribute("ResourceType")
-		label.Text = Strings.format("Pointer.Collect", {
+		-- Un objet rangé au coin de stockage (010-coin-stockage) se « reprend » plutôt qu'il ne se
+		-- « ramasse » : c'est l'attribut Stored, posé par le serveur, qui le distingue. La touche est
+		-- la même ; le serveur revalide la portée (crochets de ForestService).
+		local key = if part:GetAttribute("Stored") == true then "Pointer.Retrieve" else "Pointer.Collect"
+		label.Text = Strings.format(key, {
 			resource = Strings.format(`Resource.{tostring(resourceType)}`),
 		})
 	end

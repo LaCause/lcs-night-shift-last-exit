@@ -9,7 +9,10 @@ export type PlayerStatus = "Alive" | "Eliminated"
 
 -- Ressources récoltables en forêt (002-premier-increment-jouable, data-model.md).
 -- "Scrap" ajouté par 003-bus-evasion (data-model.md) : sert uniquement à réparer le bus.
-export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread" | "Scrap"
+-- Les quatre premières se récoltent en forêt ; HealKit et FuelCanister sont des objets fabriqués à
+-- l'établi (009-craft-etabli) : ils se portent, se lâchent et se ramassent comme le reste, mais
+-- jamais un nœud de forêt n'en génère.
+export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread" | "Scrap" | "HealKit" | "FuelCanister"
 
 -- Sacs de portage (004-sac-collecte, data-model.md). "MediumBag" ajouté par
 -- 008-boutique-persistance (avantage de départ "sac de départ agrandi") : la table BAG_TYPES de
@@ -57,6 +60,9 @@ export type RejectCode =
 	| "RecipeUnknown"
 	| "InsufficientResources"
 	| "NoBenefit"
+	-- Ajouté par la refonte en deux phases de 009-craft-etabli : fabriquer sans avoir choisi (ou en
+	-- ayant choisi une autre) recette à l'établi.
+	| "NoRecipeSelected"
 
 export type RefPointId =
 	"Spawn"
@@ -73,6 +79,8 @@ export type RefPointId =
 	| "EnemySpawn"
 	-- Ajouté par 009-craft-etabli (research R1) : nouveau lieu, pas un point orphelin recyclé.
 	| "Workbench"
+	-- Ajouté par 010-coin-stockage (research R3) : centre de la grille des emplacements du stock.
+	| "Storage"
 
 -- Contrat de système chargé par Shared/Util/Loader (serveur : Services/, client : Controllers/).
 export type System = {
