@@ -78,13 +78,13 @@ return {
 	-- jamais régénéré par partie contrairement à la forêt — c'est de l'habillage, pas du gameplay.
 	World = {
 		-- Nombre d'arbres plantés autour du restaurant.
-		TreeCount = { value = 60, default = 60, min = 0, max = 300, kind = "integer" },
+		TreeCount = { value = 110, default = 110, min = 0, max = 300, kind = "integer" },
 		-- Distance minimale au centre, en studs : reste hors du complexe du restaurant (mêmes
 		-- proportions que Forest.AreaMinRadius, qui protège déjà cette zone).
 		TreeMinRadius = { value = 40, default = 40, min = 10, max = 200 },
 		-- Distance maximale au centre, en studs : un peu au-delà de Forest.AreaMaxRadius, pour
 		-- que le décor déborde légèrement de la zone de récolte.
-		TreeMaxRadius = { value = 170, default = 170, min = 20, max = 300 },
+		TreeMaxRadius = { value = 250, default = 250, min = 20, max = 300 },
 		-- Distance minimale à tout point de référence (Bus, enseigne néon, etc.), en studs : évite
 		-- qu'un arbre pousse à travers un poste ou un décor existant.
 		TreeExclusionRadius = { value = 14, default = 14, min = 4, max = 40 },
@@ -93,14 +93,14 @@ return {
 	-- 002-premier-increment-jouable : forêt et points de ressource.
 	Forest = {
 		-- Nombre de nœuds générés par partie, par type de ressource.
-		NodeCountEssence = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
-		NodeCountSuspectSteak = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
-		NodeCountRoadBread = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
+		NodeCountEssence = { value = 12, default = 12, min = 1, max = 40, kind = "integer" },
+		NodeCountSuspectSteak = { value = 12, default = 12, min = 1, max = 40, kind = "integer" },
+		NodeCountRoadBread = { value = 12, default = 12, min = 1, max = 40, kind = "integer" },
 		-- 003-bus-evasion : nœuds de ferraille.
-		NodeCountScrap = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
+		NodeCountScrap = { value = 12, default = 12, min = 1, max = 40, kind = "integer" },
 		-- Distance au centre du restaurant, en studs.
 		AreaMinRadius = { value = 40, default = 40, min = 20, max = 100 },
-		AreaMaxRadius = { value = 150, default = 150, min = 60, max = 400 },
+		AreaMaxRadius = { value = 230, default = 230, min = 60, max = 400 },
 		-- Portée de récolte d'un nœud, en studs.
 		HarvestRange = { value = 8, default = 8, min = 4, max = 20 },
 		-- Délai avant qu'un nœud récolté redevienne disponible, en secondes.
@@ -149,6 +149,11 @@ return {
 		GiveUpDelay = { value = 12, default = 12, min = 1, max = 120, test = 5 },
 		-- Durée de vie maximale avant disparition, en secondes.
 		MaxLifetime = { value = 90, default = 90, min = 5, max = 600, test = 20 },
+		-- 007-nuits-optionnelles-evasion : dégâts de contact ajoutés par nuit au-delà du seuil
+		-- minimum (contracts/config.md).
+		ExtraNightDamageGrowth = { value = 5, default = 5, min = 0, max = 50 },
+		-- Vitesse de déplacement ajoutée par nuit au-delà du seuil minimum, en studs/s.
+		ExtraNightSpeedGrowth = { value = 1, default = 1, min = 0, max = 10 },
 	},
 
 	-- 003-bus-evasion : réparation du bus et départ.
@@ -186,6 +191,11 @@ return {
 		MaxCoordinate = { value = 2000, default = 2000, min = 100, max = 10000 },
 		-- Fréquence du lancer de rayon du pointeur côté client, en Hz.
 		PointerRefreshRate = { value = 15, default = 15, min = 5, max = 60, kind = "integer" },
+		-- Accélération de la chute d'un objet relâché en l'air, en studs/s² (la gravité du monde est
+		-- 196) : plus bas, la chute se voit mieux sur une petite hauteur.
+		FallGravity = { value = 90, default = 90, min = 20, max = 400 },
+		-- 008-boutique-persistance : contenance du sac agrandi (avantage de départ "BiggerBag").
+		MediumCapacity = { value = 8, default = 8, min = 1, max = 50, kind = "integer" },
 	},
 
 	-- 002-premier-increment-jouable : transition d'éclairage et de brouillard entre phases.
@@ -198,5 +208,61 @@ return {
 		-- Lighting.FogEnd pour chaque état ; une valeur élevée = brouillard quasi absent.
 		DayFogEnd = { value = 100000, default = 100000, min = 100, max = 100000, kind = "integer" },
 		NightFogEnd = { value = 220, default = 220, min = 20, max = 2000, kind = "integer" },
+	},
+
+	-- 006-monnaie-jetons-fidelite : monnaie persistante, gain par nuit et bonus d'évasion.
+	Currency = {
+		-- Gain crédité pour la première nuit terminée.
+		NightlyBase = { value = 10, default = 10, min = 1, max = 500 },
+		-- Montant ajouté au gain à chaque nuit supplémentaire (doit rester > 0 : garantit la
+		-- croissance stricte exigée, SC-002).
+		NightlyGrowth = { value = 5, default = 5, min = 0, max = 200 },
+		-- Bonus versé par nuit survécue, au moment d'une évasion réussie.
+		EscapeBonusPerNight = { value = 25, default = 25, min = 1, max = 1000 },
+		-- Nombre de tentatives avant d'abandonner un chargement ou une écriture en échec.
+		SaveRetryAttempts = { value = 3, default = 3, min = 1, max = 10, kind = "integer" },
+		-- Délai entre deux tentatives, en secondes.
+		SaveRetryDelay = { value = 2, default = 2, min = 0.5, max = 30 },
+	},
+
+	-- 008-boutique-persistance : boutique d'objets cosmétiques et avantages de départ. Mêmes
+	-- valeurs que Currency.SaveRetryAttempts/SaveRetryDelay (006), dupliquées plutôt que partagées
+	-- pour garder les deux DataStores indépendants l'un de l'autre (research R3).
+	Boutique = {
+		-- Nombre de tentatives avant d'abandonner un chargement ou une écriture en échec.
+		SaveRetryAttempts = { value = 3, default = 3, min = 1, max = 10, kind = "integer" },
+		-- Délai entre deux tentatives, en secondes.
+		SaveRetryDelay = { value = 2, default = 2, min = 0.5, max = 30 },
+	},
+
+	-- 009-craft-etabli : fabrication à l'établi (contracts/config.md). Les recettes elles-mêmes
+	-- (ingrédients, identifiants) vivent dans Craft/Recipes.luau, pas ici (research R2).
+	Craft = {
+		-- Portée pour fabriquer à l'établi, en studs (même échelle que Bus/Generator.InteractRange).
+		InteractRange = { value = 8, default = 8, min = 4, max = 20 },
+		-- Santé restaurée par la trousse de soins (HealKit).
+		HealAmount = { value = 30, default = 30, min = 1, max = 500, kind = "integer" },
+		-- Carburant ajouté au générateur par le bidon de secours (FuelCanister).
+		FuelAmount = { value = 25, default = 25, min = 1, max = 1000, kind = "integer" },
+	},
+
+	-- 010-coin-stockage : coin de stockage commun de l'arrière-salle (contracts/config.md). La
+	-- disposition des emplacements se déduit de ces réglages et du point de référence Storage, il
+	-- n'y a aucune liste de coordonnées à tenir à jour (research R3).
+	Storage = {
+		-- Nombre d'emplacements. Au-delà de 16, la grille sort de la zone marquée au sol (8 × 8).
+		Capacity = { value = 12, default = 12, min = 1, max = 16, kind = "integer" },
+		-- Colonnes de la grille au sol ; les rangées se déduisent : ceil(Capacity / Columns).
+		Columns = { value = 4, default = 4, min = 1, max = 8, kind = "integer" },
+		-- Distance entre deux emplacements voisins, en studs (contient le plus large visuel d'objet).
+		SlotSpacing = { value = 2, default = 2, min = 1.5, max = 4 },
+		-- Portée pour ranger ET reprendre, en studs, mesurée horizontalement depuis le point de
+		-- référence Storage. Max 7 : au-delà, le pipeline réseau (Forest.HarvestRange + tolérance)
+		-- refuserait certaines reprises que le stockage accepterait (research R7).
+		InteractRange = { value = 6, default = 6, min = 3, max = 7 },
+		-- Délai minimal entre deux messages « stockage plein » pour un même joueur, en secondes.
+		FullNoticeCooldown = { value = 2, default = 2, min = 0, max = 10 },
+		-- Distance jusqu'à laquelle l'indicateur « Stockage n/N » reste visible, en studs.
+		IndicatorDistance = { value = 40, default = 40, min = 10, max = 100 },
 	},
 }

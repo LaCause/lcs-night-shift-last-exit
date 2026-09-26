@@ -17,6 +17,15 @@ local VisualService = require(script.Parent.VisualService)
 
 type ResourceType = Types.ResourceType
 
+-- Crochets par nœud (010-coin-stockage, research R2) : un service placé au-dessus de la forêt
+-- (le stockage) pose ces deux fonctions sur un nœud qu'il fige, sans que la forêt connaisse ce
+-- service. `canTake` peut refuser la reprise (nil = permise) ; `onTaken` est appelé une seule fois
+-- quand la reprise est acquise. Un nœud sans crochet se comporte exactement comme avant.
+export type NodeHooks = {
+	canTake: (player: Player) -> Types.RejectCode?,
+	onTaken: () -> (),
+}
+
 type NodeState = {
 	model: Model,
 	part: BasePart,
@@ -25,6 +34,8 @@ type NodeState = {
 	-- 004-sac-collecte : vrai pour un objet sorti d'un sac (ForestService.spawnDrop). Seule
 	-- différence avec un nœud généré : il ne réapparaît pas une fois ramassé (FR-021).
 	dropped: boolean,
+	-- 010-coin-stockage : crochets posés par le stockage sur un objet rangé ; nil pour tout le reste.
+	hooks: NodeHooks?,
 }
 
 -- Ordre fixe : garantit des tirages reproductibles pour une même seed (SC-009).
@@ -37,6 +48,10 @@ local VISUAL_FOR: { [ResourceType]: string } = {
 	SuspectSteak = "SuspectCooler",
 	RoadBread = "RoadVendingMachine",
 	Scrap = "ScrapPile",
+	-- 009-craft-etabli : objets fabriqués. Absents de RESOURCE_TYPES (aucun nœud n'en génère), mais
+	-- ils apparaissent au sol quand un joueur les lâche (spawnDrop).
+	HealKit = "HealKitItem",
+	FuelCanister = "FuelCanisterItem",
 }
 
 local NODE_COUNT_SETTING: { [ResourceType]: string } = {
@@ -62,6 +77,24 @@ local function setAvailable(node: NodeState, value: boolean)
 			descendant.CanCollide = value
 		end
 	end
+end
+
+-- Sort un nœud disponible du monde, qu'il ait été récolté ou consommé par un poste (établi). Un
+-- objet lâché d'un sac existait déjà : le faire réapparaître le dupliquerait, il quitte donc le
+-- monde définitivement (004-sac-collecte, FR-021) ; un nœud généré réapparaît après son délai.
+local function retire(id: string, node: NodeState)
+	setAvailable(node, false)
+	if node.dropped then
+		nodes[id] = nil
+		node.model:Destroy()
+		return
+	end
+	local respawnDelay: number = Config.get("Forest", "RespawnDelay", MatchService.isTestProfile())
+	task.delay(respawnDelay, function()
+		if nodes[id] == node then
+			setAvailable(node, true)
+		end
+	end)
 end
 
 local function buildNode(folder: Folder, resourceType: ResourceType, id: string, position: Vector3): NodeState?
@@ -144,6 +177,56 @@ function ForestService.findNode(id: any): BasePart?
 	return node.part
 end
 
+-- Nœud correspondant à une pièce, retrouvé par l'attribut NodeId que buildNode y a écrit. nil si la
+-- pièce n'est pas (ou plus) un nœud connu.
+local function nodeOfPart(part: BasePart): NodeState?
+	local id = part:GetAttribute("NodeId")
+	if typeof(id) ~= "string" then
+		return nil
+	end
+	local node = nodes[id]
+	if node == nil or node.part ~= part then
+		return nil
+	end
+	return node
+end
+
+-- Pose des crochets sur un nœud (010-coin-stockage, research R2). Sans effet si la pièce n'est pas
+-- un nœud connu ; remplace d'éventuels crochets précédents.
+function ForestService.attachHooks(part: BasePart, hooks: NodeHooks)
+	local node = nodeOfPart(part)
+	if node ~= nil then
+		node.hooks = hooks
+	end
+end
+
+-- Vérifie qu'un joueur peut reprendre ce nœud : nil si le nœud est inconnu ou n'a aucun crochet
+-- (aucun changement pour un nœud ordinaire), sinon le verdict de `canTake`. Appelée par
+-- HarvestResource et par CarryService.GrabItem avant leurs refus propres au joueur.
+function ForestService.checkTake(player: Player, part: BasePart): Types.RejectCode?
+	local node = nodeOfPart(part)
+	if node == nil or node.hooks == nil then
+		return nil
+	end
+	return node.hooks.canTake(player)
+end
+
+-- Reprise acquise : appelle `onTaken` une seule fois puis retire les crochets. Sans effet sur un
+-- nœud qui n'en a pas. Les crochets sont retirés AVANT l'appel : un `onTaken` qui échouerait ou qui
+-- repasserait par ce nœud ne peut pas être rappelé une seconde fois.
+function ForestService.releaseHooks(part: BasePart)
+	local node = nodeOfPart(part)
+	if node == nil then
+		return
+	end
+	local hooks = node.hooks
+	if hooks == nil then
+		return
+	end
+	node.hooks = nil
+	hooks.onTaken()
+end
+
 -- Compteur des objets lâchés : donne des identifiants uniques et stables, sans aucun tirage
 -- (principe V). Jamais remis à zéro — une nouvelle partie vide `nodes`, donc aucune collision.
 local dropCount = 0
@@ -169,6 +252,22 @@ function ForestService.spawnDrop(resourceType: ResourceType, position: Vector3):
 	end
 	node.dropped = true
 	return id
+end
+
+-- Consomme un nœud disponible sans passer par le sac (009-craft-etabli : objet glissé sur
+-- l'établi). Renvoie son type, ou nil si `part` n'est pas un nœud connu et disponible — l'appelant
+-- n'accorde alors rien, donc aucune ressource ne naît d'un nœud déjà pris.
+function ForestService.consumeNode(part: BasePart): ResourceType?
+	local id = part:GetAttribute("NodeId")
+	if typeof(id) ~= "string" then
+		return nil
+	end
+	local node = nodes[id]
+	if node == nil or node.part ~= part or not node.available then
+		return nil
+	end
+	retire(id, node)
+	return node.resourceType
 end
 
 function ForestService.isReady(): boolean
@@ -198,6 +297,13 @@ function ForestService.Init()
 			if typeof(grabbedBy) == "number" and grabbedBy ~= 0 and grabbedBy ~= player.UserId then
 				return "AlreadyCarried"
 			end
+			-- Objet rangé au stockage (010-coin-stockage, research R2) : hors de portée du coin, la
+			-- reprise est refusée. Avant les refus propres au joueur (sac rangé, sac plein) : un
+			-- joueur trop loin reçoit TooFar, pas une explication sur son sac. Sans crochet : nil.
+			local blocked = ForestService.checkTake(player, node.part)
+			if blocked ~= nil then
+				return blocked
+			end
 			-- On ne ramasse que le sac en main (FR-019) : sans contenant sorti, rien à remplir.
 			-- Attribut écrit par BagService, lu ici — même procédé que BagCapacity plus bas, pour
 			-- ne pas faire dépendre ce service de lui.
@@ -215,22 +321,12 @@ function ForestService.Init()
 				})
 				return "InventoryFull"
 			end
-			setAvailable(node, false)
+			-- La reprise est acquise : libère l'emplacement d'un objet rangé (no-op sinon), avant que
+			-- retire() ne détruise le nœud.
+			ForestService.releaseHooks(node.part)
+			retire(payload.target, node)
 			-- Retour son/visuel léger côté client (SfxController) : pas d'effet de jeu.
 			NotifyService.send(player, "ResourceHarvested", { resourceType = node.resourceType })
-			if node.dropped then
-				-- Un objet lâché d'un sac existait déjà : le faire réapparaître le dupliquerait.
-				-- Il quitte le monde définitivement (FR-021).
-				nodes[payload.target] = nil
-				node.model:Destroy()
-				return nil
-			end
-			local respawnDelay: number = Config.get("Forest", "RespawnDelay", MatchService.isTestProfile())
-			task.delay(respawnDelay, function()
-				if nodes[payload.target] == node then
-					setAvailable(node, true)
-				end
-			end)
 			return nil
 		end,
 	})

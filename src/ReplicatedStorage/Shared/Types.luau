@@ -9,19 +9,24 @@ export type PlayerStatus = "Alive" | "Eliminated"
 
 -- Ressources récoltables en forêt (002-premier-increment-jouable, data-model.md).
 -- "Scrap" ajouté par 003-bus-evasion (data-model.md) : sert uniquement à réparer le bus.
-export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread" | "Scrap"
+-- Les quatre premières se récoltent en forêt ; HealKit et FuelCanister sont des objets fabriqués à
+-- l'établi (009-craft-etabli) : ils se portent, se lâchent et se ramassent comme le reste, mais
+-- jamais un nœud de forêt n'en génère.
+export type ResourceType = "Essence" | "SuspectSteak" | "RoadBread" | "Scrap" | "HealKit" | "FuelCanister"
 
--- Sacs de portage (004-sac-collecte, data-model.md). Un seul type pour l'instant : la table
--- BAG_TYPES de BagService est conçue pour en accueillir d'autres (contenances supérieures) sans
--- logique nouvelle, seulement une entrée de plus.
-export type BagType = "LittleBag"
+-- Sacs de portage (004-sac-collecte, data-model.md). "MediumBag" ajouté par
+-- 008-boutique-persistance (avantage de départ "sac de départ agrandi") : la table BAG_TYPES de
+-- BagService était conçue pour en accueillir d'autres sans logique nouvelle, seulement une entrée
+-- de plus (research R6).
+export type BagType = "LittleBag" | "MediumBag"
 
 -- État de la commande de la nuit (data-model.md, « Commande »).
 -- "Preparing" ajouté : la préparation dure désormais Kitchen.PrepareDuration secondes au lieu
 -- d'être instantanée (retour visuel/sonore pendant la cuisson).
 export type OrderStatus = "" | "Pending" | "Preparing" | "Prepared" | "Delivered" | "Failed"
 
-export type RejectCode = "BadEnvelope"
+export type RejectCode =
+	"BadEnvelope"
 	| "UnknownAction"
 	| "NotAllowed"
 	| "RateLimited"
@@ -46,8 +51,21 @@ export type RejectCode = "BadEnvelope"
 	| "NotCarrying"
 	| "BagNotEquipped"
 	| "BagEmpty"
+	-- Ajoutés par 008-boutique-persistance (contracts/server-api.md).
+	| "ItemUnknown"
+	| "AlreadyOwned"
+	| "InsufficientFunds"
+	| "NotOwned"
+	-- Ajoutés par 009-craft-etabli (contracts/server-api.md).
+	| "RecipeUnknown"
+	| "InsufficientResources"
+	| "NoBenefit"
+	-- Ajouté par la refonte en deux phases de 009-craft-etabli : fabriquer sans avoir choisi (ou en
+	-- ayant choisi une autre) recette à l'établi.
+	| "NoRecipeSelected"
 
-export type RefPointId = "Spawn"
+export type RefPointId =
+	"Spawn"
 	| "DriveThruWindow"
 	| "Intercom"
 	| "Counter"
@@ -59,6 +77,10 @@ export type RefPointId = "Spawn"
 	| "BusSpot"
 	-- Ajouté par 002-premier-increment-jouable (research R10).
 	| "EnemySpawn"
+	-- Ajouté par 009-craft-etabli (research R1) : nouveau lieu, pas un point orphelin recyclé.
+	| "Workbench"
+	-- Ajouté par 010-coin-stockage (research R3) : centre de la grille des emplacements du stock.
+	| "Storage"
 
 -- Contrat de système chargé par Shared/Util/Loader (serveur : Services/, client : Controllers/).
 export type System = {

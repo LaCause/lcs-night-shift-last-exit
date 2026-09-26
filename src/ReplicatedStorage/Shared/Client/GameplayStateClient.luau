@@ -16,6 +16,9 @@ export type State = {
 	suspectSteak: number,
 	roadBread: number,
 	scrap: number,
+	-- Objets fabriqués à l'établi (009-craft-etabli) : ils occupent le sac comme le reste.
+	healKit: number,
+	fuelCanister: number,
 	-- Stock partagé du restaurant (InventoryService, ReplicatedStorage.Stock).
 	stockSuspectSteak: number,
 	stockRoadBread: number,
@@ -41,6 +44,8 @@ export type State = {
 	bagUsed: number,
 	-- Sac en main ou rangé : conditionne le ramassage et le vidage au sol (FR-019, FR-020).
 	bagEquipped: boolean,
+	-- Monnaie persistante (CurrencyService, attribut sur Player, 006-monnaie-jetons-fidelite).
+	currency: number,
 }
 
 local WAIT_TIMEOUT = 30
@@ -78,14 +83,18 @@ function GameplayStateClient.get(): State
 	local suspectSteak: number = readAttr(player, "Inv_SuspectSteak", 0)
 	local roadBread: number = readAttr(player, "Inv_RoadBread", 0)
 	local scrap: number = readAttr(player, "Inv_Scrap", 0)
+	local healKit: number = readAttr(player, "Inv_HealKit", 0)
+	local fuelCanister: number = readAttr(player, "Inv_FuelCanister", 0)
 	return {
 		essence = essence,
 		suspectSteak = suspectSteak,
 		roadBread = roadBread,
 		scrap = scrap,
+		healKit = healKit,
+		fuelCanister = fuelCanister,
 		bagType = readAttr(player, "BagType", ""),
 		bagCapacity = readAttr(player, "BagCapacity", 0),
-		bagUsed = essence + suspectSteak + roadBread + scrap,
+		bagUsed = essence + suspectSteak + roadBread + scrap + healKit + fuelCanister,
 		bagEquipped = readAttr(player, "BagEquipped", false),
 		stockSuspectSteak = readAttr(stockFolder, "SuspectSteak", 0),
 		stockRoadBread = readAttr(stockFolder, "RoadBread", 0),
@@ -99,6 +108,7 @@ function GameplayStateClient.get(): State
 		busDeposited = readAttr(busFolder, "Deposited", 0),
 		busRequired = readAttr(busFolder, "Required", 0),
 		busRepaired = readAttr(busFolder, "Repaired", false),
+		currency = readAttr(player, "Currency", 0),
 	}
 end
 

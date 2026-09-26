@@ -32,6 +32,8 @@ local deposited = 0
 local required = 0
 local repaired = false
 local frozen = false
+local departurePrompt: ProximityPrompt? = nil
+local stayPrompt: ProximityPrompt? = nil
 
 local function stateFolder(): Folder
 	local folder = state
@@ -69,6 +71,21 @@ local function setVisualRepaired(value: boolean)
 	end
 end
 
+-- 007-nuits-optionnelles-evasion : correction de recherche — DepartBus est en réalité déjà
+-- restreint à la phase Évasion depuis 003-bus-evasion (`phases = { "Escape" }` dans
+-- Remotes.luau, repéré seulement en testant cette fonctionnalité en direct : research.md et
+-- spec.md avaient supposé un départ anticipé possible avant le seuil minimum, qui n'a jamais
+-- existé). Les deux prompts partagent donc exactement la même condition.
+local function refreshEscapePrompts()
+	local available = repaired and MatchService.getPhase() == "Escape"
+	if departurePrompt then
+		departurePrompt.Enabled = available
+	end
+	if stayPrompt then
+		stayPrompt.Enabled = available
+	end
+end
+
 local function recomputeRequiredIfUnfrozen()
 	if frozen then
 		return
@@ -84,6 +101,7 @@ local function resetForNewMatch()
 	frozen = false
 	publish()
 	setVisualRepaired(false)
+	refreshEscapePrompts()
 end
 
 function BusService.isRepaired(): boolean
@@ -115,6 +133,7 @@ function BusService.deposit(player: Player, maxAmount: number): number
 			repaired = true
 			publish()
 			setVisualRepaired(true)
+			refreshEscapePrompts()
 			NotifyService.broadcast("BusRepaired", {})
 			log:info("Bus réparé (%d/%d)", deposited, required)
 		end
@@ -137,6 +156,7 @@ function BusService.forceRepair()
 	if not repaired then
 		repaired = true
 		setVisualRepaired(true)
+		refreshEscapePrompts()
 		NotifyService.broadcast("BusRepaired", {})
 	end
 	publish()
@@ -159,6 +179,62 @@ local function buildRepairPrompt()
 	prompt.Parent = found
 end
 
+-- 007-nuits-optionnelles-evasion : le prompt de départ, désactivé tant que le bus n'est pas
+-- réparé (research R5 — InteractionController.luau relaie déjà tout ProximityPrompt portant
+-- l'attribut Intent, aucun changement client nécessaire).
+local function buildEscapePrompts()
+	local found = WorldService.refPoint(BUS_ID)
+	if found == nil then
+		error(`Point de référence {BUS_ID} introuvable : départ désactivé`)
+	end
+	local prompt = Instance.new("ProximityPrompt")
+	prompt.Name = "DeparturePrompt"
+	prompt.ActionText = Strings.format("Bus.DepartAction")
+	prompt.ObjectText = Strings.format("Bus.DepartObject")
+	prompt.HoldDuration = 0
+	prompt.MaxActivationDistance = Config.get("Bus", "DepartureRange")
+	prompt.RequiresLineOfSight = false
+	prompt.Enabled = false
+	prompt:SetAttribute("Intent", "DepartBus")
+	prompt:SetAttribute("Target", BUS_ID)
+	prompt.Parent = found
+	departurePrompt = prompt
+
+	local stay = Instance.new("ProximityPrompt")
+	stay.Name = "StayPrompt"
+	stay.ActionText = Strings.format("Bus.StayAction")
+	stay.ObjectText = Strings.format("Bus.StayObject")
+	stay.HoldDuration = 0
+	stay.MaxActivationDistance = Config.get("Bus", "DepartureRange")
+	stay.RequiresLineOfSight = false
+	stay.Enabled = false
+	stay:SetAttribute("Intent", "PushNight")
+	stay:SetAttribute("Target", BUS_ID)
+	stay.Parent = found
+	stayPrompt = stay
+end
+
+-- Vérifie que tous les joueurs vivants sont à portée de `busPart` (007-nuits-optionnelles-evasion,
+-- research R3 : extrait de l'ancien corps de `DepartBus` pour que ce dernier et `PushNight`
+-- partagent exactement la même règle plutôt que deux copies qui pourraient diverger).
+local function teamReadyAtBus(busPart: BasePart): boolean
+	local range: number = Config.get("Bus", "DepartureRange") + Config.get("Net", "DistanceTolerance")
+	for _, session in SessionService.all() do
+		if session.Status == "Alive" then
+			local character = session.Player.Character
+			local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+			if root == nil or not root:IsA("BasePart") then
+				return false
+			end
+			local distance = (root.Position - busPart.Position).Magnitude
+			if distance > range then
+				return false
+			end
+		end
+	end
+	return true
+end
+
 function BusService.Init()
 	local folder = Instance.new("Folder")
 	folder.Name = "BusState"
@@ -167,12 +243,16 @@ function BusService.Init()
 	resetForNewMatch()
 
 	buildRepairPrompt()
+	buildEscapePrompts()
 
 	MatchService.MatchStarting:Connect(resetForNewMatch)
 	MatchService.PhaseStarted:Connect(function(phase: Types.Phase, _night: number)
 		if phase == "Escape" then
 			frozen = true
 		end
+		-- 007-nuits-optionnelles-evasion : le prompt "rester" dépend de la phase, pas seulement
+		-- de `repaired` — le rafraîchir à chaque changement de phase (entrée ET sortie d'Évasion).
+		refreshEscapePrompts()
 	end)
 	SessionService.PlayerJoined:Connect(recomputeRequiredIfUnfrozen)
 	SessionService.PlayerLeft:Connect(recomputeRequiredIfUnfrozen)
@@ -199,21 +279,35 @@ function BusService.Init()
 			if busPart == nil then
 				return "TargetMissing"
 			end
-			local range: number = Config.get("Bus", "DepartureRange") + Config.get("Net", "DistanceTolerance")
-			for _, session in SessionService.all() do
-				if session.Status == "Alive" then
-					local character = session.Player.Character
-					local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
-					if root == nil or not root:IsA("BasePart") then
-						return "TeamNotReady"
-					end
-					local distance = (root.Position - busPart.Position).Magnitude
-					if distance > range then
-						return "TeamNotReady"
-					end
-				end
+			if not teamReadyAtBus(busPart) then
+				return "TeamNotReady"
 			end
 			MatchService.endMatch("Victory", "le bus est parti")
+			return nil
+		end,
+	})
+
+	-- 007-nuits-optionnelles-evasion : au lieu de partir, l'équipe choisit de rester une nuit de
+	-- plus. Réservée à la phase Évasion, comme DepartBus — déjà garanti par la déclaration
+	-- `phases = { "Escape" }` de Remotes.luau (NetService rejette WrongPhase avant même d'appeler
+	-- ce gestionnaire, research R3), donc aucune revérification ici, par cohérence avec DepartBus
+	-- ci-dessus et le reste des intentions du projet (aucune ne revérifie sa propre phase).
+	NetService.registerIntent("PushNight", {
+		handler = function(_player: Player, payload: { [string]: any }): Types.RejectCode?
+			if payload.target ~= BUS_ID then
+				return "TargetMissing"
+			end
+			if not repaired then
+				return "BusNotRepaired"
+			end
+			local busPart = WorldService.refPoint(BUS_ID)
+			if busPart == nil then
+				return "TargetMissing"
+			end
+			if not teamReadyAtBus(busPart) then
+				return "TeamNotReady"
+			end
+			MatchService.pushExtraNight()
 			return nil
 		end,
 	})

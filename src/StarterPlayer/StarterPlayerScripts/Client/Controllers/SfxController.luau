@@ -32,6 +32,12 @@ local SFX: { [string]: SfxDef } = {
 	BagFull = { id = "rbxasset://sounds/uuhhh.mp3", volume = 0.4, pitchMin = 0.9, pitchMax = 0.95 },
 	-- Sac vidé au sol : volontairement sans variation de hauteur, le geste étant unique et net.
 	BagDropped = { id = "rbxasset://sounds/snap.mp3", volume = 0.45 },
+	-- 009-craft-etabli : objet fabriqué, trousse consommée (plus aigu), trousse refusée à santé pleine.
+	ItemCrafted = { id = "rbxasset://sounds/button.wav", volume = 0.5 },
+	HealKitUsed = { id = "rbxasset://sounds/action_jump.mp3", volume = 0.45, pitchMin = 1.1, pitchMax = 1.2 },
+	HealKitUseless = { id = "rbxasset://sounds/uuhhh.mp3", volume = 0.35, pitchMin = 0.9, pitchMax = 0.95 },
+	-- 010-coin-stockage : rangement refusé, stock plein — même son que le refus de sac plein.
+	StorageFull = { id = "rbxasset://sounds/uuhhh.mp3", volume = 0.4, pitchMin = 0.9, pitchMax = 0.95 },
 
 	-- Retour d'équipe, occasionnel : un peu plus présent.
 	OrderStarted = { id = "rbxasset://sounds/clickfast.wav", volume = 0.5 },

@@ -1,6 +1,6 @@
 --!strict
 -- Plan déclaratif du monde de départ (data-model.md, « Point de référence »).
--- Coordonnées en studs : sol à y = 0, restaurant sur x ∈ [-20, 20] et z ∈ [-14, 14],
+-- Coordonnées en studs : sol à y = 0, restaurant sur x ∈ [-20, 20] et z ∈ [-14, 20],
 -- façade et parking au sud (z négatifs), voie du drive-thru à l'est.
 
 export type Placement = { visual: string, cframe: CFrame }
@@ -22,17 +22,26 @@ local refPoints: { [string]: RefPointSpec } = {
 	Spawn = { cframe = CFrame.new(0, 0.5, -30) * FACE_NORTH },
 	DriveThruWindow = { cframe = CFrame.new(20, 6, 4) },
 	Intercom = { cframe = CFrame.new(28.2, 4.6, -8) },
-	Counter = { cframe = CFrame.new(0, 4.8, -6) },
+	Counter = { cframe = CFrame.new(0, 4.8, -4) },
 	Worktop = { cframe = CFrame.new(6, 4.5, 6) },
 	Fryer = { cframe = CFrame.new(-6, 5, 6) },
-	-- Devant le générateur (GeneratorBody dans Catalog.luau, centré en (-14, 2.4, 18) sur la
-	-- dalle GeneratorPad) : au bord sud de la dalle, pas dans le volume solide du décor.
-	Generator = { cframe = CFrame.new(-14, 1, 21.5) },
+	-- 009-craft-etabli (research R1) : poste d'atelier, désormais dans l'arrière-salle plutôt que
+	-- serré entre le plan de travail et le mur est. Coordonnées hand-matchées à la géométrie
+	-- d'Assets/Catalog.luau (WorkbenchBody/WorkbenchTop), même convention que Worktop/Fryer.
+	Workbench = { cframe = CFrame.new(9, 4.5, 14) },
+	-- 010-coin-stockage (research R3) : centre de la grille des emplacements du stock, au milieu de
+	-- la zone marquée au sol de l'angle nord-ouest de l'arrière-salle (StorageZoneFloor dans
+	-- Assets/Catalog.luau, centré en (-13,5 ; 14)). L'ordonnée 1,1 est le dessus de cette zone
+	-- (FLOOR_TOP + 0,06 + 0,04) : c'est la hauteur à laquelle les objets rangés sont posés.
+	Storage = { cframe = CFrame.new(-13.5, 1.1, 14) },
+	-- Devant le générateur (GeneratorBody dans Catalog.luau, centré en (-14, 2.4, 26) sur la
+	-- dalle GeneratorPad) : à un stud du bord de la dalle, pas dans le volume solide du décor.
+	Generator = { cframe = CFrame.new(-14, 1, 29.5) },
 	NeonSign = { cframe = CFrame.new(-28, 20, -38) },
 	SafeZoneCenter = { cframe = CFrame.new(0, 2, 0) },
 	BusSpot = { cframe = CFrame.new(36, 1, 22) },
 	-- En lisière de forêt, au nord, au-delà de Forest.AreaMaxRadius (002-premier-increment-jouable).
-	EnemySpawn = { cframe = CFrame.new(0, 1, 180) },
+	EnemySpawn = { cframe = CFrame.new(0, 1, 270) },
 }
 
 return table.freeze({

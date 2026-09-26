@@ -68,6 +68,9 @@ local TEXTS: { [string]: string } = {
 	["Resource.SuspectSteak"] = "Steak suspect",
 	["Resource.RoadBread"] = "Pain de route",
 	["Resource.Scrap"] = "Ferraille",
+	-- 009-craft-etabli : objets fabriqués (se portent dans le sac comme les ressources).
+	["Resource.HealKit"] = "Trousse de soins",
+	["Resource.FuelCanister"] = "Bidon de carburant",
 
 	-- Forêt et récolte
 	["Forest.HarvestAction"] = "Récolter",
@@ -105,6 +108,14 @@ local TEXTS: { [string]: string } = {
 	["Notify.EnemyHit"] = "Une présence vous a touché dans le noir.",
 	["Hud.Health"] = "Santé",
 
+	-- 006-monnaie-jetons-fidelite : monnaie persistante
+	["Hud.Currency"] = "Jetons fidélité",
+
+	-- 007-nuits-optionnelles-evasion : choix partir/rester au bus (le statut "Bus réparé — en
+	-- route !" existant sert déjà de titre, inutile d'en dupliquer un)
+	["Hud.Escape.Depart"] = "Partir maintenant (+{amount} jetons)",
+	["Hud.Escape.Stay"] = "Rester une nuit (+{amount} jetons)",
+
 	-- Panneau de développement, ajouts 002-premier-increment-jouable
 	["Dev.GiveResources"] = "Ressources +1",
 	["Dev.OrderDeliver"] = "Commande réussie",
@@ -117,6 +128,9 @@ local TEXTS: { [string]: string } = {
 	["Bus.RepairObject"] = "Bus à réparer",
 	["Bus.DepartAction"] = "Partir",
 	["Bus.DepartObject"] = "Bus réparé",
+	-- 007-nuits-optionnelles-evasion : prompt "rester une nuit de plus"
+	["Bus.StayAction"] = "Rester",
+	["Bus.StayObject"] = "Une nuit de plus ?",
 	["Notify.ScrapDeposited"] = "Ferraille déposée : {amount}.",
 	["Notify.BusRepaired"] = "Le bus est réparé. La sortie est possible.",
 	["Hud.Bus.Progress"] = "Bus : {deposited} / {required} ferraille",
@@ -144,6 +158,57 @@ local TEXTS: { [string]: string } = {
 	-- Panneau de développement, ajouts 004-sac-collecte
 	["Dev.FillBag"] = "Remplir le sac",
 	["Dev.EmptyBag"] = "Vider le sac",
+
+	-- 008-boutique-persistance : boutique d'objets cosmétiques et avantages de départ.
+	["Hud.Boutique"] = "Boutique",
+	["Boutique.Title"] = "BOUTIQUE",
+	["Boutique.Buy"] = "Acheter ({price})",
+	["Boutique.Owned"] = "Possédé",
+	["Boutique.Active"] = "Actif",
+	["Boutique.SetActive"] = "Utiliser",
+	["Boutique.InsufficientFunds"] = "Solde insuffisant",
+	["Boutique.Item.BagTintRed"] = "Sac — teinte rouge",
+	["Boutique.Item.BagTintRed.Desc"] = "Un sac reteint d'un rouge vif. Purement cosmétique.",
+	["Boutique.Item.BagTintBlue"] = "Sac — teinte bleue",
+	["Boutique.Item.BagTintBlue.Desc"] = "Un sac reteint d'un bleu profond. Purement cosmétique.",
+	["Boutique.Item.BusPaintTeal"] = "Bus — peinture turquoise",
+	["Boutique.Item.BusPaintTeal.Desc"] = "Une nouvelle couche de peinture sur le vieux bus.",
+	["Boutique.Item.CounterGlowPink"] = "Comptoir — éclairage rose",
+	["Boutique.Item.CounterGlowPink.Desc"] = "Un éclairage rose néon sous le comptoir.",
+	["Boutique.Item.BiggerBag"] = "Sac de départ agrandi",
+	["Boutique.Item.BiggerBag.Desc"] = "Commencez chaque partie avec un sac de plus grande contenance.",
+	-- Nom du Tool du sac agrandi (BagService, même patron que Bag.LittleBag).
+	["Bag.MediumBag"] = "Grand sac",
+
+	-- 009-craft-etabli : fabrication à l'établi.
+	["Craft.Title"] = "ÉTABLI",
+	["Craft.InteractAction"] = "Fabriquer",
+	["Craft.InteractObject"] = "Établi",
+	["Craft.Make"] = "Fabriquer",
+	["Craft.NoBenefit"] = "Sans effet",
+	["Craft.InsufficientResources"] = "Ressources insuffisantes",
+	-- Phase 1 (choix de la recette) puis phase 2 (plan de travail, dépôt des ingrédients).
+	["Craft.ChooseHint"] = "1. Choisissez une recette, puis déposez ses ingrédients sur l'établi.",
+	["Craft.Select"] = "Choisir cette recette",
+	["Craft.Back"] = "Changer de recette",
+	["Craft.BenchHint"] = "[G] : déposer un objet du sac ici (maintenir : tout le sac).\nVous pouvez aussi glisser un objet ramassé sur l'établi.",
+	["Craft.SlotCount"] = "{placed} / {required}",
+	["Craft.MissingIngredients"] = "Ingrédients manquants",
+	["Craft.Recipe.HealKit"] = "Trousse de soins de fortune",
+	["Craft.Recipe.HealKit.Desc"] = "Se range dans le sac. [H] pour l'utiliser : restaure {amount} points de santé.",
+	["Craft.Recipe.FuelCanister"] = "Bidon de carburant de secours",
+	["Craft.Recipe.FuelCanister.Desc"] = "Se range dans le sac. À verser dans le générateur : ajoute {amount} de carburant.",
+	-- Retours de gameplay des objets fabriqués (fil du HUD).
+	["Notify.ItemCrafted"] = "Fabriqué : {item}. Il est dans votre sac.",
+	["Notify.HealKitUsed"] = "Trousse utilisée : +{amount} points de santé.",
+	["Notify.HealKitUseless"] = "Santé déjà pleine : la trousse reste dans le sac.",
+	["Hud.HealKit"] = "[H] Trousse de soins × {count}",
+
+	-- 010-coin-stockage : coin de stockage commun. Indicateur de remplissage au-dessus du coin,
+	-- refus de rangement (fil du HUD) et indice de visée d'un objet rangé.
+	["Storage.Fill"] = "Stockage {count}/{capacity}",
+	["Notify.StorageFull"] = "Stockage plein ({capacity}) : reprenez un objet avant d'en ranger un autre.",
+	["Pointer.Retrieve"] = "[F] Reprendre {resource}",
 }
 
 local warned: { [string]: boolean } = {}

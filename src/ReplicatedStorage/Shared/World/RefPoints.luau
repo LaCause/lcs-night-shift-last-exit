@@ -20,6 +20,8 @@ local IDS: { Types.RefPointId } = {
 	"SafeZoneCenter",
 	"BusSpot",
 	"EnemySpawn",
+	"Workbench",
+	"Storage",
 }
 
 local RefPoints = {}

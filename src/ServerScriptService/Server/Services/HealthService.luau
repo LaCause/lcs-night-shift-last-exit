@@ -51,6 +51,22 @@ function HealthService.damage(player: Player, amount: number)
 	end
 end
 
+-- Miroir symétrique de damage ci-dessus (009-craft-etabli, research R4) : clamp à MaxHealth au
+-- lieu de 0, aucun changement de statut associé. Sans effet si le joueur n'est pas en vie.
+function HealthService.heal(player: Player, amount: number)
+	local session = SessionService.get(player)
+	if session == nil or session.Status ~= "Alive" then
+		return
+	end
+	local current = HealthService.get(player)
+	if current == nil then
+		return
+	end
+	local maxHealth = player:GetAttribute("MaxHealth")
+	local cap = if typeof(maxHealth) == "number" then maxHealth else Config.get("Players", "MaxHealth")
+	player:SetAttribute("Health", math.min(cap, current + amount))
+end
+
 function HealthService.Init()
 	MatchService.MatchStarting:Connect(resetAll)
 	SessionService.PlayerJoined:Connect(initPlayer)

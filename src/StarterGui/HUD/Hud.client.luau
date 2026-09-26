@@ -23,6 +23,14 @@ local MatchStateClient = require(ClientFolder:WaitForChild("MatchStateClient") :
 local NetClient = require(ClientFolder:WaitForChild("NetClient") :: ModuleScript)
 local UiKit = require(ClientFolder:WaitForChild("UiKit") :: ModuleScript)
 
+-- 008-boutique-persistance : le contrôleur du panneau boutique vit dans Controllers/ (chargé par
+-- Loader depuis Main.client.luau), rejoint ici via PlayerScripts — même arborescence que
+-- StarterPlayerScripts une fois répliquée au joueur (research R11).
+local PlayerScripts = Players.LocalPlayer:WaitForChild("PlayerScripts")
+local BoutiquePanelController = require(
+	PlayerScripts:WaitForChild("Client"):WaitForChild("Controllers"):WaitForChild("BoutiquePanelController") :: ModuleScript
+)
+
 type GameplayState = GameplayStateClient.State
 
 local screen = script.Parent :: ScreenGui
@@ -42,6 +50,13 @@ local FEED_KINDS = {
 	-- jamais ses refus au client (research R10).
 	"BagFull",
 	"BagDropped",
+	-- 009-craft-etabli : objet fabriqué, trousse consommée, trousse refusée à santé pleine — même
+	-- raison que BagFull, le pipeline ne renvoie jamais ses refus au client.
+	"ItemCrafted",
+	"HealKitUsed",
+	"HealKitUseless",
+	-- 010-coin-stockage : rangement refusé, stock plein — même raison que BagFull.
+	"StorageFull",
 }
 local PHASE_COLORS: { [string]: Color3 } = {
 	Waiting = Colors.Muted,
@@ -163,6 +178,17 @@ UiKit.corner(healthFill, 6)
 local healthText = panelRow(healthPanel, "Text", "")
 healthText.LayoutOrder = 2
 
+-- 006-monnaie-jetons-fidelite : même colonne que la Vie, toujours visible (principe VII,
+-- « ressources du joueur »). Une simple ligne suffit — pas de barre, le solde n'a pas de plafond.
+local currencyText = panelRow(healthPanel, "Currency", "")
+currencyText.LayoutOrder = 3
+
+-- 009-craft-etabli : rappel de la touche pour se soigner, affiché seulement quand le sac contient
+-- une trousse (sinon la ligne disparaît et le panneau reprend sa hauteur).
+local healKitText = panelRow(healthPanel, "HealKit", "", Colors.Good)
+healKitText.LayoutOrder = 4
+healKitText.Visible = false
+
 local previousHealth: number? = nil
 
 local function refreshHealth()
@@ -172,6 +198,9 @@ local function refreshHealth()
 	healthFill.Size = UDim2.fromScale(ratio, 1)
 	healthFill.BackgroundColor3 = steady
 	healthText.Text = `{math.floor(state.health)} / {math.floor(state.maxHealth)}`
+	currencyText.Text = `{Strings.format("Hud.Currency")} : {state.currency}`
+	healKitText.Visible = state.healKit > 0
+	healKitText.Text = Strings.format("Hud.HealKit", { count = state.healKit })
 
 	if previousHealth ~= nil and state.health ~= previousHealth then
 		local accent = if state.health > previousHealth then Colors.Good else Colors.Bad
@@ -403,6 +432,16 @@ local function refreshOrders()
 		end)
 	end
 end
+
+-- Bouton boutique (coin bas droit, libre : le fil de notifications occupe le bas gauche, la
+-- colonne Vie/Équipe le haut droit) ---------------------------------------------------------
+
+local boutiqueButton = UiKit.button(screen, "BoutiqueButton", Strings.format("Hud.Boutique"), function()
+	BoutiquePanelController.Toggle()
+end)
+boutiqueButton.Size = UDim2.fromOffset(120, 34)
+boutiqueButton.Position = UDim2.new(1, -12, 1, -12)
+boutiqueButton.AnchorPoint = Vector2.new(1, 1)
 
 -- Fil de notifications (en bas à gauche) ---------------------------------------------------
 

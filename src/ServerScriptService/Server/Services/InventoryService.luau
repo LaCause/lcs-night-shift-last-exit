@@ -47,8 +47,10 @@ local function getNumber(instance: Instance, key: string): number
 	return if typeof(value) == "number" then value else 0
 end
 
--- Toutes les ressources personnelles (indépendant de STOCK_TYPES, qui exclut Essence/Scrap).
-local ALL_RESOURCE_TYPES: { ResourceType } = { "Essence", "SuspectSteak", "RoadBread", "Scrap" }
+-- Toutes les ressources personnelles (indépendant de STOCK_TYPES, qui exclut Essence/Scrap), y
+-- compris les objets fabriqués à l'établi (009-craft-etabli) qui occupent le sac comme le reste.
+local ALL_RESOURCE_TYPES: { ResourceType } =
+	{ "Essence", "SuspectSteak", "RoadBread", "Scrap", "HealKit", "FuelCanister" }
 
 -- Ajoute `count` entrées de `resourceType` en fin d'ordre (les plus récentes).
 local function pushOrder(player: Player, resourceType: ResourceType, count: number)
@@ -133,6 +135,12 @@ function InventoryService.addPersonal(player: Player, resourceType: ResourceType
 	player:SetAttribute(key, getNumber(player, key) + amount)
 	pushOrder(player, resourceType, amount)
 	return true
+end
+
+-- Vrai si `amount` unités de plus tiennent dans le sac (009-craft-etabli) : permet de rendre d'un
+-- seul bloc les ingrédients posés sur l'établi sans jamais en perdre une partie faute de place.
+function InventoryService.canAddPersonal(player: Player, amount: number): boolean
+	return personalTotal(player) + amount <= bagCapacity(player)
 end
 
 -- Verse SuspectSteak/RoadBread de l'inventaire du joueur vers le stock partagé (jamais
@@ -232,6 +240,29 @@ function InventoryService.consumeStock(requirements: { [string]: number })
 	local folder = stockFolder()
 	for resourceType, amount in requirements do
 		folder:SetAttribute(resourceType, getNumber(folder, resourceType) - amount)
+	end
+end
+
+-- Miroir exact de hasStock/consumeStock ci-dessus, mais sur l'inventaire personnel plutôt que le
+-- stock partagé (009-craft-etabli, research R3) : aucune vérification/déduction multi-ressources
+-- atomique n'existait pour l'inventaire personnel avant cet incrément.
+function InventoryService.hasPersonal(player: Player, requirements: { [string]: number }): boolean
+	for resourceType, amount in requirements do
+		if getNumber(player, attributeKey(resourceType :: ResourceType)) < amount then
+			return false
+		end
+	end
+	return true
+end
+
+-- À appeler seulement après que hasPersonal a confirmé la disponibilité (pas de vérification
+-- redondante). Appelle removeFromOrder pour chaque ressource déduite, comme depositResource
+-- déjà : maintient l'invariant #order[player] == somme(Inv_*) documenté en tête de ce module.
+function InventoryService.consumePersonal(player: Player, requirements: { [string]: number })
+	for resourceType, amount in requirements do
+		local key = attributeKey(resourceType :: ResourceType)
+		player:SetAttribute(key, getNumber(player, key) - amount)
+		removeFromOrder(player, resourceType :: ResourceType, amount)
 	end
 end
 

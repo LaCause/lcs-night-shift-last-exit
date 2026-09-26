@@ -1,8 +1,10 @@
 --!strict
 -- Correspondance objet-poste (005-depot-intelligent-sac, FR-005 à FR-009). Seule connaissance
 -- neuve de cette fonctionnalité : quel type d'objet transporté correspond à quel poste, et
--- comment l'y déposer. Requiert InventoryService, GeneratorService, BusService et WorldService ;
--- aucun d'eux ne le requiert en retour (research R2) — aucune dépendance circulaire.
+-- comment l'y déposer. Requiert InventoryService, GeneratorService, BusService, CraftService,
+-- StorageService et WorldService ; aucun d'eux ne le requiert en retour (research R2) — aucune
+-- dépendance circulaire. Ordre d'essai : l'établi, puis le coin de stockage, puis les postes fixes
+-- (010-coin-stockage, research R4) ; leurs zones sont disjointes par construction.
 --
 -- tryDeposit ne touche jamais le sac tant que le dépôt n'est pas garanti : chaque poste vérifie
 -- sa capacité avant tout prélèvement, en réutilisant exactement le contrat « prélever puis
@@ -18,8 +20,10 @@ local Config = require(Shared.Config)
 local Log = require(Shared.Util.Log)
 local Types = require(Shared.Types)
 local BusService = require(script.Parent.BusService)
+local CraftService = require(script.Parent.CraftService)
 local GeneratorService = require(script.Parent.GeneratorService)
 local InventoryService = require(script.Parent.InventoryService)
+local StorageService = require(script.Parent.StorageService)
 local WorldService = require(script.Parent.WorldService)
 
 type ResourceType = Types.ResourceType
@@ -61,6 +65,12 @@ local function attemptGenerator(player: Player): boolean
 	return true
 end
 
+-- Le bidon fabriqué (009-craft-etabli) se verse au générateur comme l'essence, mais ajoute
+-- Craft.FuelAmount d'un coup ; GeneratorService.depositCanister vérifie la place avant de prélever.
+local function attemptCanister(player: Player): boolean
+	return GeneratorService.depositCanister(player)
+end
+
 -- BusService.deposit vérifie lui-même sa propre capacité (required - deposited) avant de
 -- prélever quoi que ce soit ; renvoie 0 sans effet si le bus est déjà réparé.
 local function attemptBus(player: Player): boolean
@@ -90,6 +100,7 @@ local AUTO_DEPOSIT: { [ResourceType]: AutoDepositDef } = {
 		attempt = attemptCounter("RoadBread"),
 	},
 	Scrap = { RefPointId = "BusSpot", RangeSetting = "Bus.InteractRange", attempt = attemptBus },
+	FuelCanister = { RefPointId = "Generator", RangeSetting = "Generator.InteractRange", attempt = attemptCanister },
 }
 
 -- Tente de déposer 1 unité de `resourceType`, apparue à `position`, dans le poste compatible.
@@ -97,6 +108,20 @@ local AUTO_DEPOSIT: { [ResourceType]: AutoDepositDef } = {
 -- de sa portée, ou s'il n'a pas de place (research R3) — l'appelant garde alors le geste existant
 -- (poser au sol).
 function StationDepositService.tryDeposit(player: Player, resourceType: ResourceType, position: Vector3): boolean
+	-- L'établi passe avant les postes fixes (009-craft-etabli) : un joueur qui lâche un objet près
+	-- de l'établi alors qu'une recette l'attend le verse dans cette recette. Cet essai vérifie
+	-- lui-même la proximité du joueur (pas de l'objet, dont la position n'est qu'un point du cercle
+	-- de dépose) et ne touche pas au sac s'il refuse.
+	if CraftService.tryPlaceFromBag(player, resourceType) then
+		return true
+	end
+	-- Puis le coin de stockage (010-coin-stockage) : un joueur qui lâche un objet dans le coin le
+	-- range sur un emplacement libre plutôt que de le laisser tomber. Même contrat que l'établi :
+	-- proximité du joueur vérifiée par le stockage lui-même, sac intact s'il refuse (stock plein,
+	-- hors de portée), l'appelant garde alors le lâcher habituel.
+	if StorageService.tryStoreFromBag(player, resourceType) then
+		return true
+	end
 	local def = AUTO_DEPOSIT[resourceType]
 	if def == nil then
 		return false

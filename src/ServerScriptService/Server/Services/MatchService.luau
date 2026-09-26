@@ -168,6 +168,19 @@ local function checkDefeat()
 	end
 end
 
+-- 007-nuits-optionnelles-evasion : au lieu de partir depuis l'Évasion, l'équipe choisit de
+-- tenter une nuit de plus. N'a d'effet que si la phase est bien « Escape » (même convention que
+-- `endMatch` : renvoie false et ne fait rien sinon). Le numéro de nuit suivant reprend
+-- `state.night`, jamais `state.totalNights` (research R2) : `advance()` y ramènera
+-- naturellement la partie en Évasion une fois cette nuit terminée, avec le bon numéro.
+function MatchService.pushExtraNight(): boolean
+	if state.phase ~= "Escape" then
+		return false
+	end
+	enterPhase("Day", state.night + 1)
+	return true
+end
+
 -- Note (003-bus-evasion, research R6) : aucune branche "Escape" ici — le départ n'est plus
 -- piloté par l'horloge de phase. BusService appelle endMatch("Victory", ...) directement quand
 -- l'équipe part avec le bus réparé ; sans limite de temps (Match.EscapeDuration = 0), advance()
@@ -184,7 +197,11 @@ advance = function()
 		if state.night < state.totalNights then
 			enterPhase("Day", state.night + 1)
 		else
-			enterPhase("Escape", state.totalNights)
+			-- state.night (pas state.totalNights) : identiques dans le flux normal, mais
+			-- state.night peut être plus grand après une ou plusieurs nuits supplémentaires
+			-- (007-nuits-optionnelles-evasion, research R2) — repasser par state.totalNights
+			-- effacerait silencieusement cette progression à chaque retour en Évasion.
+			enterPhase("Escape", state.night)
 		end
 	elseif phase == "Ended" then
 		if SessionService.countPresent() > 0 then
