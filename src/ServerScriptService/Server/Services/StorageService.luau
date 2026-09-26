@@ -360,7 +360,8 @@ function StorageService.tryStoreFromBag(player: Player, resourceType: ResourceTy
 end
 
 -- Range un objet du monde relâché au-dessus du coin (glisser-déposer, research R6). La portée se
--- mesure depuis l'objet lui-même (« là où il est relâché »). Renvoie true si l'objet a été retiré du
+-- mesure depuis l'objet lui-même (« là où il est relâché ») : `at` est la position où il se posera,
+-- l'objet pouvant encore tomber. Renvoie true si l'objet a été retiré du
 -- monde et recréé figé sur un emplacement ; false sans effet sinon (hors de portée, objet déjà pris,
 -- ou stock plein : le joueur en est prévenu et l'objet reste où il a été relâché).
 --
@@ -368,12 +369,12 @@ end
 -- retrait échoue (déjà pris par quelqu'un d'autre), on défait le nœud fraîchement créé. Dans l'ordre
 -- inverse, un échec d'apparition perdrait l'objet. Un nœud naturel de forêt est traité comme s'il
 -- avait été récolté : il réapparaît selon les règles habituelles (spec, cas limites).
-function StorageService.tryStoreCarried(player: Player, part: BasePart): boolean
+function StorageService.tryStoreCarried(player: Player, part: BasePart, at: Vector3?): boolean
 	local resourceType = part:GetAttribute("ResourceType")
 	if typeof(resourceType) ~= "string" or part.Parent == nil then
 		return false
 	end
-	if not withinRange(part.Position) then
+	if not withinRange(at or part.Position) then
 		return false
 	end
 	if lowestFreeIndex() == nil then

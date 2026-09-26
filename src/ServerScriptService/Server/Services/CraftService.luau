@@ -191,8 +191,8 @@ end
 -- Consomme un objet du monde relâché sur l'établi (glisser-déposer à la souris, CarryService),
 -- si sa recette en attend encore. La portée se mesure depuis l'objet lui-même, comme les autres
 -- postes de dépôt (StationDepositService). Renvoie false sans rien toucher sinon : l'objet reste
--- alors où il a été posé.
-function CraftService.tryPlaceCarried(player: Player, part: BasePart): boolean
+-- alors où il a été posé. `at` : position où il se posera (il peut encore tomber), sinon la sienne.
+function CraftService.tryPlaceCarried(player: Player, part: BasePart, at: Vector3?): boolean
 	local resourceType = part:GetAttribute("ResourceType")
 	if typeof(resourceType) ~= "string" then
 		return false
@@ -201,7 +201,7 @@ function CraftService.tryPlaceCarried(player: Player, part: BasePart): boolean
 	if recipe == nil or stillNeeded(player, recipe, resourceType :: ResourceType) <= 0 then
 		return false
 	end
-	if not nearWorkbench(part.Position) then
+	if not nearWorkbench(at or part.Position) then
 		return false
 	end
 	local consumed = ForestService.consumeNode(part)

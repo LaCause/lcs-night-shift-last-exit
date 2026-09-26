@@ -191,6 +191,9 @@ return {
 		MaxCoordinate = { value = 2000, default = 2000, min = 100, max = 10000 },
 		-- Fréquence du lancer de rayon du pointeur côté client, en Hz.
 		PointerRefreshRate = { value = 15, default = 15, min = 5, max = 60, kind = "integer" },
+		-- Accélération de la chute d'un objet relâché en l'air, en studs/s² (la gravité du monde est
+		-- 196) : plus bas, la chute se voit mieux sur une petite hauteur.
+		FallGravity = { value = 90, default = 90, min = 20, max = 400 },
 		-- 008-boutique-persistance : contenance du sac agrandi (avantage de départ "BiggerBag").
 		MediumCapacity = { value = 8, default = 8, min = 1, max = 50, kind = "integer" },
 	},

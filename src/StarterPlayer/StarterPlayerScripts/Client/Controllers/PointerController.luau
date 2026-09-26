@@ -37,6 +37,7 @@ local hintLabel: TextLabel? = nil
 local aimedPart: BasePart? = nil
 local carriedPart: BasePart? = nil
 local carryAlign: AlignPosition? = nil
+local carryOrient: AlignOrientation? = nil
 local carryAttachment: Attachment? = nil
 
 -- Minuteur de la touche de vidage (US2) : le client ne fait que choisir QUELLE intention envoyer
@@ -229,6 +230,10 @@ local function stopCarry(sendRelease: boolean)
 		carryAlign:Destroy()
 		carryAlign = nil
 	end
+	if carryOrient ~= nil then
+		carryOrient:Destroy()
+		carryOrient = nil
+	end
 	if carryAttachment ~= nil then
 		carryAttachment:Destroy()
 		carryAttachment = nil
@@ -264,8 +269,23 @@ local function startCarry(part: BasePart)
 	align.Position = part.Position
 	align.Parent = part
 
+	-- Sans cela l'objet, simulé par la physique pendant le déplacement, tourne sur lui-même en l'air
+	-- (chocs avec le décor, couple d'un modèle en plusieurs pièces) : l'orientation prise à la
+	-- saisie est maintenue, et toute rotation résiduelle est annulée.
+	local orient = Instance.new("AlignOrientation")
+	orient.Name = "CarryOrient"
+	orient.Mode = Enum.OrientationAlignmentMode.OneAttachment
+	orient.Attachment0 = attachment
+	orient.RigidityEnabled = false
+	orient.MaxTorque = 1000000
+	orient.Responsiveness = 60
+	orient.CFrame = part.CFrame.Rotation
+	orient.Parent = part
+	part.AssemblyAngularVelocity = Vector3.zero
+
 	carryAttachment = attachment
 	carryAlign = align
+	carryOrient = orient
 	carriedPart = part
 end
 
