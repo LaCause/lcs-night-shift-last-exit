@@ -78,13 +78,13 @@ return {
 	-- jamais régénéré par partie contrairement à la forêt — c'est de l'habillage, pas du gameplay.
 	World = {
 		-- Nombre d'arbres plantés autour du restaurant.
-		TreeCount = { value = 60, default = 60, min = 0, max = 300, kind = "integer" },
+		TreeCount = { value = 110, default = 110, min = 0, max = 300, kind = "integer" },
 		-- Distance minimale au centre, en studs : reste hors du complexe du restaurant (mêmes
 		-- proportions que Forest.AreaMinRadius, qui protège déjà cette zone).
 		TreeMinRadius = { value = 40, default = 40, min = 10, max = 200 },
 		-- Distance maximale au centre, en studs : un peu au-delà de Forest.AreaMaxRadius, pour
 		-- que le décor déborde légèrement de la zone de récolte.
-		TreeMaxRadius = { value = 170, default = 170, min = 20, max = 300 },
+		TreeMaxRadius = { value = 250, default = 250, min = 20, max = 300 },
 		-- Distance minimale à tout point de référence (Bus, enseigne néon, etc.), en studs : évite
 		-- qu'un arbre pousse à travers un poste ou un décor existant.
 		TreeExclusionRadius = { value = 14, default = 14, min = 4, max = 40 },
@@ -93,14 +93,14 @@ return {
 	-- 002-premier-increment-jouable : forêt et points de ressource.
 	Forest = {
 		-- Nombre de nœuds générés par partie, par type de ressource.
-		NodeCountEssence = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
-		NodeCountSuspectSteak = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
-		NodeCountRoadBread = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
+		NodeCountEssence = { value = 12, default = 12, min = 1, max = 40, kind = "integer" },
+		NodeCountSuspectSteak = { value = 12, default = 12, min = 1, max = 40, kind = "integer" },
+		NodeCountRoadBread = { value = 12, default = 12, min = 1, max = 40, kind = "integer" },
 		-- 003-bus-evasion : nœuds de ferraille.
-		NodeCountScrap = { value = 8, default = 8, min = 1, max = 40, kind = "integer" },
+		NodeCountScrap = { value = 12, default = 12, min = 1, max = 40, kind = "integer" },
 		-- Distance au centre du restaurant, en studs.
 		AreaMinRadius = { value = 40, default = 40, min = 20, max = 100 },
-		AreaMaxRadius = { value = 150, default = 150, min = 60, max = 400 },
+		AreaMaxRadius = { value = 230, default = 230, min = 60, max = 400 },
 		-- Portée de récolte d'un nœud, en studs.
 		HarvestRange = { value = 8, default = 8, min = 4, max = 20 },
 		-- Délai avant qu'un nœud récolté redevienne disponible, en secondes.

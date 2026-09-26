@@ -41,7 +41,7 @@ local refPoints: { [string]: RefPointSpec } = {
 	SafeZoneCenter = { cframe = CFrame.new(0, 2, 0) },
 	BusSpot = { cframe = CFrame.new(36, 1, 22) },
 	-- En lisière de forêt, au nord, au-delà de Forest.AreaMaxRadius (002-premier-increment-jouable).
-	EnemySpawn = { cframe = CFrame.new(0, 1, 180) },
+	EnemySpawn = { cframe = CFrame.new(0, 1, 270) },
 }
 
 return table.freeze({

@@ -221,7 +221,10 @@ local function step(dt: number)
 	if activeWaypoints ~= nil and activeWaypoints[waypointIndex] ~= nil then
 		local waypoint = activeWaypoints[waypointIndex]
 		nextPosition = moveToward(currentPosition, waypoint.Position, dt)
-		if (nextPosition - waypoint.Position).Magnitude <= WAYPOINT_TOLERANCE then
+		-- Distance à plat, comme moveToward : les points du chemin sont à la hauteur de la surface
+		-- navigable, pas à celle de l'ennemi, et un écart vertical bloquerait le point 1 à jamais.
+		local flatGap = Vector3.new(nextPosition.X - waypoint.Position.X, 0, nextPosition.Z - waypoint.Position.Z)
+		if flatGap.Magnitude <= WAYPOINT_TOLERANCE then
 			waypointIndex += 1
 		end
 	else

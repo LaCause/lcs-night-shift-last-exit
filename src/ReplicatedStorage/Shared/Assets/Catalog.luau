@@ -118,7 +118,7 @@ end
 
 local function buildGround(): Model
 	local model = newModel("Ground")
-	block(model, "Grass", Vector3.new(400, 2, 400), CFrame.new(0, -1, 0), COLORS.Grass, {
+	block(model, "Grass", Vector3.new(640, 2, 640), CFrame.new(0, -1, 0), COLORS.Grass, {
 		material = Enum.Material.Grass,
 	})
 	return finish(model)
